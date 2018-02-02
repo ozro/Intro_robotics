@@ -12,14 +12,28 @@ float robot_X = 0.0, robot_Y = 0.0, robot_TH = 0.0;
 //Wheel diameter and circumference in mm
 const float WHEEL_DIAMETER = 55;
 const float WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * 3.14;
+//Distance between wheels in mm
+const float WHEEL_DISTANCE = 157.5;
 //Number of ticks per mm
 const float TICKS_PER_MM = 360/WHEEL_CIRCUMFERENCE;
+//Number of encoder ticks in task
+float ticksInSegment = 0;
+
 
 int velocityUpdateInterval = 5;
 int PIDUpdateInterval = 2;
 
 //Set the time variables to calculate dt of a time step
 int dt = 0;
+
+//set the encoder variables to find the difference in encoder ticks per step
+int lastEncoderLeft = 0;
+int currEncoderLeft = 0;
+int dtEncoderLeft = 0;
+
+int lastEncoderRight = 0;
+int currEncoderRight = 0;
+int dtEncoderRight = 0;
 
 //Change these during demo
 int inputStraight[2] = {0, 0}; // in mm
@@ -32,7 +46,13 @@ int motorPower = 50;
 *****************************************/
 task dead_reckoning()
 {
+	float avgDisplacement = 0;
+	float angularDisplacement = 0;
+	float leftDisplacement = 0;
+	float rightDisplacement = 0;
 	clearTimer(T1);
+	lastEncoderLeft = nMotorEncoder[motorLeft];
+	lastEncoderRight = nMotorEncoder[motorLeft];
 
 	while(1)
 	{
@@ -40,10 +60,28 @@ task dead_reckoning()
 		// Fill in code for numerical integration / position estimation here
 		//
 		dt = time1[T1];
+		if(dt == 0)
+		{
+			continue;
+		}
 		clearTimer(T1);
 
+		currEncoderLeft = nMotorEncoder[motorLeft];
+		currEncoderRight = nMotorEncoder[motorRight];
+		dtEncoderLeft = currEncoderLeft - lastEncoderLeft;
+		dtEncoderRight = currEncoderRight - lastEncoderRight;
+		lastEncoderLeft = currEncoderLeft;
+		lastEncoderRight = currEncoderRight;
 
-
+		//update robot_x and robot_Y
+		leftDisplacement = dtEncoderLeft / TICKS_PER_MM;
+		rightDisplacement = dtEncoderRight / TICKS_PER_MM;
+		avgDisplacement = (leftDisplacement + rightDisplacement) /2;
+		angularDisplacement = (rightDisplacement - leftDisplacement) / WHEEL_DISTANCE;
+		robot_TH = robot_TH + angularDisplacement/2;
+		robot_X = robot_X + cos(robot_TH)*angularDisplacement;
+		robot_Y = robot_Y + sin(robot_TH)*angularDisplacement;
+		robot_TH = robot_TH + angularDisplacement/2;
 
 		/*Code that plots the robot's current position and also prints it out as text*/
 		nxtSetPixel(50 + (int)(100.0 * robot_X), 32 + (int)(100.0 * robot_Y));
@@ -142,9 +180,12 @@ task main()
 		goalStraight = inputStraight[i];
 		goalTurn = inputTurn[i];
 
+		ticksInSegment = goalStraight*TICKS_PER_MM;
+
 		//
 		// Write your own codes for turning
 		//
+
 
 		start_X = robot_X;
 		start_Y = robot_Y;
