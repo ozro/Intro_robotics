@@ -1,17 +1,25 @@
 /**********************************************
- * Lab 3 : Starter code
- * Written by Kaushik Viswanathan,
- * Modified by Allan Wang (Jan 2017)
+* Lab 3 : Starter code
+* Written by Kaushik Viswanathan,
+* Modified by Allan Wang (Jan 2017)
 
- * Feel free to modify any part of these codes.
- **********************************************/
+* Feel free to modify any part of these codes.
+**********************************************/
 
 //Global variables - you will need to change some of these
 //Robot's positions
 float robot_X = 0.0, robot_Y = 0.0, robot_TH = 0.0;
+//Wheel diameter and circumference in mm
+const float WHEEL_DIAMETER = 55;
+const float WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * 3.14;
+//Number of ticks per mm
+const float TICKS_PER_MM = 360/WHEEL_CIRCUMFERENCE;
 
 int velocityUpdateInterval = 5;
 int PIDUpdateInterval = 2;
+
+//Set the time variables to calculate dt of a time step
+int dt = 0;
 
 //Change these during demo
 int inputStraight[2] = {0, 0}; // in mm
@@ -19,17 +27,23 @@ int inputTurn[2] = {0, 0}; // in degrees, negative means clockwise rotation
 int motorPower = 50;
 
 /*****************************************
- * Complete this function so that it
- * continuously updates the robot's position
- *****************************************/
+* Complete this function so that it
+* continuously updates the robot's position
+*****************************************/
 task dead_reckoning()
 {
+	clearTimer(T1);
 
 	while(1)
 	{
 		//
 		// Fill in code for numerical integration / position estimation here
 		//
+		dt = time1[T1];
+		clearTimer(T1);
+
+
+
 
 		/*Code that plots the robot's current position and also prints it out as text*/
 		nxtSetPixel(50 + (int)(100.0 * robot_X), 32 + (int)(100.0 * robot_Y));
@@ -42,9 +56,9 @@ task dead_reckoning()
 }
 
 /*****************************************
- * Function that draws a grid on the LCD
- * for easier readout of whatever is plot
- *****************************************/
+* Function that draws a grid on the LCD
+* for easier readout of whatever is plot
+*****************************************/
 void draw_grid()
 {
 	for(int i = 0; i < 65; i++)
@@ -90,21 +104,21 @@ void draw_grid()
 }
 
 /**********************************************
- * Function that judges if two floats are equal
- **********************************************/
- bool equal(float a, float b) {
-   float epsilon = 1;
-   if (abs(a-b) < epsilon) {
-     return true;
-   } else {
-     return false;
-   }
- }
+* Function that judges if two floats are equal
+**********************************************/
+bool equal(float a, float b) {
+	float epsilon = 1;
+	if (abs(a-b) < epsilon) {
+		return true;
+		} else {
+		return false;
+	}
+}
 
 
 /*****************************************
- * Main function - Needs changing
- *****************************************/
+* Main function - Needs changing
+*****************************************/
 task main()
 {
 	/* Reset encoders and turn on PID control */
@@ -136,7 +150,7 @@ task main()
 		start_Y = robot_Y;
 
 		/* Example codes for moving in a striaght line a certain distance,
-		 * you need to change this for MUCH better performance */
+		* you need to change this for MUCH better performance */
 		motor[motorA] = motorPower;
 		motor[motorB] = motorPower;
 		distTravelled = sqrt(pow(robot_X - start_X, 2) + pow(robot_Y - start_Y, 2));
