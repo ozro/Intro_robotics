@@ -13,11 +13,11 @@ const int LOW_THRESHOLD = 36;
 const int HIGH_THRESHOLD = 66;
 //Brightness value at the "gray zone" between line and background
 const int THRESHOLD = (LOW_THRESHOLD + HIGH_THRESHOLD)/2;
-const int MOTOR_POWER = 50;	 //Base motor power to control the speed
+const int MOTOR_POWER = 60;	 //Base motor power to control the speed
 const int UPDATE_INTERVAL = 1; //Delay updates by x miliseconds
 
-const float kP = 2;
-const float kD = 20;
+const float kP = 1.5;
+const float kD = 25;
 
 /*****************************************
 * Main function - Needs changing
@@ -45,6 +45,8 @@ task main()
 		if(dt == 0) {
 			continue;
 		}
+
+		//PID
 		float actual = SensorValue[S3];
 		float error = THRESHOLD - actual; // Negative if too dark, positive if too bright
 		float d_error = (error-last_error)/dt;
@@ -52,7 +54,6 @@ task main()
 
 		float signal = kP * error + kD * d_error;
 		signal = signal/15;
-
 
 		nxtDisplayCenteredTextLine(2, "Brightness: %d", SensorValue[S3]);
 		nxtDisplayCenteredTextLine(3, "Signal: %f", signal);
