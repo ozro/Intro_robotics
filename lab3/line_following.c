@@ -16,8 +16,8 @@ const int THRESHOLD = (LOW_THRESHOLD + HIGH_THRESHOLD)/2;
 const int MOTOR_POWER = 60;	 //Base motor power to control the speed
 const int UPDATE_INTERVAL = 1; //Delay updates by x miliseconds
 
-const float kP = 1.5;
-const float kD = 25;
+const float kP = 1.4;
+const float kD = 20;
 
 /*****************************************
 * Main function - Needs changing
@@ -29,10 +29,19 @@ task main()
 	//Wait for sensor initialization
 	wait1Msec(50);
 
-	// Find the line by turning right
-	while(SensorValue[S3] >= THRESHOLD){
+	clearTimer(T1);
+
+	// Find the line by turning left, then if line is not found within angle, turn right
+	while(SensorValue[S3] >= THRESHOLD ){
+		if (time1[T1] < 500) {
 		motor[motorA] = MOTOR_POWER;
 		motor[motorB] = -1 * MOTOR_POWER;
+		}
+		else {
+			motor[motorA] = -1 * MOTOR_POWER;
+			motor[motorB] = MOTOR_POWER;
+		}
+
 
 		nxtDisplayCenteredTextLine(2, "Searching: %d", SensorValue[S3]);
 		wait1Msec(UPDATE_INTERVAL);
@@ -48,24 +57,24 @@ task main()
 
 		//PID
 		float actual = SensorValue[S3];
-		float error = THRESHOLD - actual; // Negative if too dark, positive if too bright
+		float error =  THRESHOLD - actual; // Negative if too dark, positive if too bright
 		float d_error = (error-last_error)/dt;
 		last_error = error;
 
 		float signal = kP * error + kD * d_error;
 		signal = signal/15;
-
 		nxtDisplayCenteredTextLine(2, "Brightness: %d", SensorValue[S3]);
 		nxtDisplayCenteredTextLine(3, "Signal: %f", signal);
 
 		// Update motors
 		if(signal > 0){ //Turn right
-			motor[motorA] = MOTOR_POWER * (-2*signal*signal+1); 	//Right Motor
-			motor[motorB] = MOTOR_POWER; //Left Motor
+			//motor[motorA] = MOTOR_POWER  * (-2*signal*signal+1); 	//Right Motor
+			motor[motorB] = MOTOR_POWER  * (-2*signal+1);
+			motor[motorA] = MOTOR_POWER; //Left Motor
 		}
 		else { //Turn left
-			motor[motorA] = MOTOR_POWER; 	//Right Motor
-			motor[motorB] = MOTOR_POWER * (-2*signal*signal+1); //Left Motor
+			motor[motorB] = MOTOR_POWER; 	//Right Motor
+			motor[motorA] = MOTOR_POWER * (2*signal+1); //Left Motor
 		}
 		wait1Msec(UPDATE_INTERVAL);
 	}
