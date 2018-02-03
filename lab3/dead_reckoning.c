@@ -28,8 +28,8 @@ int PIDUpdateInterval = 2;
 //Change these during demo
 //float inputStraight[2] = {12*25.4, 36*25.4}; // in mm
 //float inputTurn[2] = {0, 0}; // in degrees, negative means clockwise rotation
-float inputStraight[2] = {8*25.4, 20*25.4};
-float inputTurn[2] = {90, -60};
+float inputStraight[2] = {12*sqrt(2)*25.4, 12*sqrt(2)*25.4};
+float inputTurn[2] = {45, -180};
 float motorPower = 1;
 
 /*****************************************
@@ -175,7 +175,7 @@ task main()
 		float last_error = goalTurn;
 		clearTimer(T1);
 
-		while (!equal(error, 0)) {
+		while (!equal(error,0)) {
 			nxtDisplayCenteredTextLine(6, "Error: %f", error);
 			nxtDisplayCenteredTextLine(4, "Goal Turn: %f", goalTurn);
 			int dt = time1[T1];
@@ -194,8 +194,8 @@ task main()
 
 			nxtDisplayCenteredTextLine(5, "Signal: %f", signal);
 
-			motor[motorRight] = signal * -1 * motorPower - sgn(signal)*20;
-			motor[motorLeft] = signal * motorPower + sgn(signal)*20;
+			motor[motorRight] = signal * -1 * motorPower - sgn(signal)*25;
+			motor[motorLeft] = signal * motorPower + sgn(signal)*25;
 		}
 		motor[motorRight] = 0;
 		motor[motorLeft] = 0;
