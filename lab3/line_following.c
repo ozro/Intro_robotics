@@ -13,7 +13,7 @@ const int LOW_THRESHOLD = 36;
 const int HIGH_THRESHOLD = 66;
 //Brightness value at the "gray zone" between line and background
 const int THRESHOLD = (LOW_THRESHOLD + HIGH_THRESHOLD)/2;
-const int MOTOR_POWER = 60;	 //Base motor power to control the speed
+const int MOTOR_POWER = 50;	 //Base motor power to control the speed
 const int UPDATE_INTERVAL = 1; //Delay updates by x miliseconds
 
 const float kP = 1.4;
@@ -34,12 +34,12 @@ task main()
 	// Find the line by turning left, then if line is not found within angle, turn right
 	while(SensorValue[S3] >= THRESHOLD ){
 		if (time1[T1] < 500) {
-		motor[motorA] = MOTOR_POWER;
-		motor[motorB] = -1 * MOTOR_POWER;
+		motor[motorA] = -1*MOTOR_POWER;
+		motor[motorB] =  MOTOR_POWER;
 		}
 		else {
-			motor[motorA] = -1 * MOTOR_POWER;
-			motor[motorB] = MOTOR_POWER;
+			motor[motorA] = MOTOR_POWER;
+			motor[motorB] = -1 *MOTOR_POWER;
 		}
 
 
