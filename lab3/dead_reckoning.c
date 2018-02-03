@@ -26,9 +26,11 @@ int velocityUpdateInterval = 5;
 int PIDUpdateInterval = 2;
 
 //Change these during demo
-float inputStraight[2] = {300, 300}; // in mm
-int inputTurn[2] = {0, 0}; // in degrees, negative means clockwise rotation
-int motorPower = 10;
+//float inputStraight[2] = {12*25.4, 36*25.4}; // in mm
+//float inputTurn[2] = {0, 0}; // in degrees, negative means clockwise rotation
+float inputStraight[2] = {8*25.4, 20*25.4};
+float inputTurn[2] = {90, -60};
+float motorPower = 1;
 
 /*****************************************
 * Complete this function so that it
@@ -61,7 +63,7 @@ task dead_reckoning()
 		float dispL = dEncL / TICKS_PER_MM;
 		float dispR = dEncR / TICKS_PER_MM;
 		float disp = (dispL + dispR)/2;
-		float angDisp = (dispL + dispR)/WHEEL_DISTANCE;
+		float angDisp = (dispL - dispR)/WHEEL_DISTANCE;
 		robot_TH = robot_TH + angDisp/2;
 		robot_X = robot_X + cos(robot_TH)*disp;
 		robot_Y = robot_Y + sin(robot_TH)*disp;
@@ -71,8 +73,8 @@ task dead_reckoning()
 		nxtSetPixel(50 + (int)(100.0 * robot_X), 32 + (int)(100.0 * robot_Y));
 		nxtDisplayTextLine(0, "X: %f", robot_X);
 		nxtDisplayTextLine(1, "Y: %f", robot_Y);
-		nxtDisplayTextLine(2, "t: %f", robot_TH);
-		nxtDisplayTextLine(6, "d: %f", sqrt(pow(robot_X - 0, 2) + pow(robot_Y - 0, 2)));
+		nxtDisplayTextLine(2, "t: %f", robot_TH / PI * 180);
+		nxtDisplayTextLine(3, "d: %f", sqrt(pow(robot_X - 0, 2) + pow(robot_Y - 0, 2)));
 
 		wait1Msec(velocityUpdateInterval);
 	}
@@ -130,7 +132,7 @@ void draw_grid()
 * Function that judges if two floats are equal
 **********************************************/
 bool equal(float a, float b) {
-	float epsilon = 1;
+	float epsilon = 0.01;
 	if (abs(a-b) < epsilon) {
 		return true;
 		} else {
@@ -144,8 +146,6 @@ bool equal(float a, float b) {
 task main()
 {
 
-	nxtDisplayCenteredTextLine(4, "Goal: %f", inputStraight[0]);
-
 	/* Reset encoders and turn on PID control */
 	nMotorEncoder[motorRight] = 0;
 	nMotorEncoder[motorLeft] = 0;
@@ -154,29 +154,63 @@ task main()
 	nPidUpdateInterval = PIDUpdateInterval;
 
 	float goalStraight = 0;
-	int goalTurn = 0;
+	float goalTurn = 0;
 	float start_X = 0;
 	float start_Y = 0;
-	float distTravelled = 0;
+	float start_TH = 0;
 
-	draw_grid();
+	//draw_grid();
 	startTask(dead_reckoning);
 
 	for(int i = 0; i < 2; i++)
 	{
 		goalStraight = inputStraight[i];
 
+		goalTurn = inputTurn[i] / 180.0 * PI * -1;
 
-		goalTurn = inputTurn[i];
+		start_TH = robot_TH;
+
+		// PID for turn control
+		float error = goalTurn;
+		float last_error = goalTurn;
+		clearTimer(T1);
+
+		while (!equal(error, 0)) {
+			nxtDisplayCenteredTextLine(6, "Error: %f", error);
+			nxtDisplayCenteredTextLine(4, "Goal Turn: %f", goalTurn);
+			int dt = time1[T1];
+			if(dt == 0){
+				continue;
+			}
+			clearTimer(T1);
+
+			float actual = robot_TH - start_TH;
+			error = goalTurn - actual;
+			float d_error = (error-last_error)/dt;
+			last_error = error;
+			float kP = 10;
+			float kD = 5;
+			float signal = kP * error + kD * d_error;
+
+			nxtDisplayCenteredTextLine(5, "Signal: %f", signal);
+
+			motor[motorRight] = signal * -1 * motorPower - sgn(signal)*20;
+			motor[motorLeft] = signal * motorPower + sgn(signal)*20;
+		}
+		motor[motorRight] = 0;
+		motor[motorLeft] = 0;
+		wait1Msec(50);
 
 		start_X = robot_X;
 		start_Y = robot_Y;
 
 		// PID for straight control
-		float error = goalStraight;
-		float last_error = goalStraight;
+		error = goalStraight;
+		last_error = goalStraight;
 		clearTimer(T1);
-		while (error > 1) {
+		while (error>1) {
+
+			nxtDisplayCenteredTextLine(4, "Goal Straight: %f", goalStraight);
 			int dt = time1[T1];
 			if(dt == 0){
 				continue;
@@ -184,17 +218,19 @@ task main()
 			clearTimer(T1);
 
 			float actual =  sqrt(pow(robot_X - start_X, 2) + pow(robot_Y - start_Y, 2));
-			float error = goalStraight - actual; // Negative if too dark, positive if too bright
+			error = goalStraight - actual;
 			float d_error = (error-last_error)/dt;
 			last_error = error;
+			//float kP = 1;
+			//float kD = 5;
 			float kP = 1;
-			float kD = 1;
+			float kD = 8;
 			float signal = kP * error + kD * d_error;
 
 			nxtDisplayCenteredTextLine(5, "Signal: %f", signal);
 
-			motor[motorRight] = motorPower * signal /300;
-			motor[motorLeft] = motorPower * signal /300;
+			motor[motorRight] = signal * motorPower;
+			motor[motorLeft] = signal * motorPower;
 		}
 
 
