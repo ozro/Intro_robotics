@@ -22,8 +22,8 @@ float last_error;
 const float MOTOR_POWER = 1;	 //Base motor power to control the speed
 const float UPDATE_INTERVAL = 1; //Delay updates by x miliseconds
 
-const float kP = 0.7;
-const float kD = 5.0;
+const float kP = .7;
+const float kD = 25;
 
 /*****************************************
 * Main function - Needs changing
@@ -53,7 +53,7 @@ task main()
 		}
 
 		//PID
-		float error = SensorRaw(frontLight) - SensorRaw(backLight); //Positive error = tilting forward. Negative error = tilting backward
+		float error = SensorRaw(frontLight) - SensorRaw(backLight) -50; //Positive error = tilting forward. Negative error = tilting backward
 		float d_error = (error-last_error)/dt;
 		last_error = error;
 
@@ -63,7 +63,8 @@ task main()
 
 		// Update motors
 		if(signal > 0){ //Tilting forward, need to move forward
-			motor(leftMotor) = MOTOR_POWER * signal;
+			//float feedforward = .1*error;
+			motor(leftMotor) = MOTOR_POWER * signal; //+ feedforward;
 			motor(rightMotor) = motor(leftMotor); //Left Motor
 		}
 		else if (signal < 0) { //Tilting backward, need to move backward
