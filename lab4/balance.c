@@ -25,13 +25,11 @@ const float MOTOR_POWER = 1;	 //Base motor power to control the speed
 const float UPDATE_INTERVAL = 1; //Delay updates by x miliseconds
 //const float UPDATE_INTERVAL = .8; //Delay updates by x miliseconds
 
+// Parameters for facing left, parallel to length
 const float kP = .48;
-//const float kP = 10;
 const float kD = 6;
-const float kI = .003;
+const float kI = .0055;
 
-//const float kP = 2;
-//const float kD = 6.3;
 
 /*****************************************
 * Main function - Needs changing
@@ -51,7 +49,7 @@ task main()
 	nMotorPIDSpeedCtrl[leftMotor] = mtrSpeedReg;
 	nPidUpdateInterval = PIDUpdateInterval;
 
-	nMaxRegulatedSpeedNxt = 750;
+	nMaxRegulatedSpeedNxt = 250;
 	//Wait for sensor initialization
 	wait1Msec(50);
 
@@ -68,7 +66,7 @@ task main()
 		}
 
 		//PID
-		float error = SensorRaw(frontLight) - SensorRaw(backLight) +15; //Positive error = tilting forward. Negative error = tilting backward
+		float error = SensorRaw(frontLight) - SensorRaw(backLight) -30; //Positive error = tilting forward. Negative error = tilting backward
 		float d_error = (error-last_error)/dt;
 		sum_error += error;
 		last_error = error;
