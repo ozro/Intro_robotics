@@ -13,6 +13,8 @@
 **********************************************/
 //Global PID Variables
 float last_error;
+float sum_error = 0;
+int PIDUpdateInterval = 2;
 
 //Set parameters
 //const int LOW_THRESHOLD = 36;
@@ -21,9 +23,15 @@ float last_error;
 //const int THRESHOLD = (LOW_THRESHOLD + HIGH_THRESHOLD)/2;
 const float MOTOR_POWER = 1;	 //Base motor power to control the speed
 const float UPDATE_INTERVAL = 1; //Delay updates by x miliseconds
+//const float UPDATE_INTERVAL = .8; //Delay updates by x miliseconds
 
-const float kP = .7;
-const float kD = 25;
+const float kP = .48;
+//const float kP = 10;
+const float kD = 6;
+const float kI = .003;
+
+//const float kP = 2;
+//const float kD = 6.3;
 
 /*****************************************
 * Main function - Needs changing
@@ -36,6 +44,13 @@ const float kD = 25;
 
 task main()
 {
+	/* Reset encoders and turn on PID control */
+	nMotorEncoder[rightMotor] = 0;
+	nMotorEncoder[leftMotor] = 0;
+	nMotorPIDSpeedCtrl[rightMotor] = mtrSpeedReg;
+	nMotorPIDSpeedCtrl[leftMotor] = mtrSpeedReg;
+	nPidUpdateInterval = PIDUpdateInterval;
+
 	nMaxRegulatedSpeedNxt = 750;
 	//Wait for sensor initialization
 	wait1Msec(50);
@@ -53,11 +68,12 @@ task main()
 		}
 
 		//PID
-		float error = SensorRaw(frontLight) - SensorRaw(backLight) -50; //Positive error = tilting forward. Negative error = tilting backward
+		float error = SensorRaw(frontLight) - SensorRaw(backLight) +15; //Positive error = tilting forward. Negative error = tilting backward
 		float d_error = (error-last_error)/dt;
+		sum_error += error;
 		last_error = error;
 
-		float signal = kP * error + kD * d_error;
+		float signal = kP * error + kD * d_error + kI * sum_error;
 		nxtDisplayCenteredTextLine(2, "Error: %f", error);
 		nxtDisplayCenteredTextLine(3, "Signal: %f", signal);
 
