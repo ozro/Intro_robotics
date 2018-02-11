@@ -10,6 +10,8 @@
 * Modified by Allan Wang (Jan 2017)
 
 * Feel free to modify any part of these codes.
+
+// This is the calibration for board B, facing down, parallel and close to the right side
 **********************************************/
 //Global PID Variables
 float last_error;
@@ -28,7 +30,7 @@ const float UPDATE_INTERVAL = 1; //Delay updates by x miliseconds
 // Parameters for facing left, parallel to length
 const float kP = .48;
 const float kD = 6;
-const float kI = .0055;
+const float kI = .006;
 
 
 /*****************************************
@@ -66,7 +68,11 @@ task main()
 		}
 
 		//PID
-		float error = SensorRaw(frontLight) - SensorRaw(backLight) -30; //Positive error = tilting forward. Negative error = tilting backward
+		// Facing left, parallel to length should have offset -15
+		// Facing right, parallel to length should have offset +45
+		// Facing down, parallel to the width should have offset 0
+		float error_offset = 0;
+		float error = SensorRaw(frontLight) - SensorRaw(backLight) + error_offset; //Positive error = tilting forward. Negative error = tilting backward
 		float d_error = (error-last_error)/dt;
 		sum_error += error;
 		last_error = error;
