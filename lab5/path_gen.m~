@@ -15,21 +15,21 @@ goal = round(goal/dx);
 
 % Calculate path using A*
 [path,f] = a_star(map, start, goal, visualize);
-cleaned_path = smoothing(path, 0.2);
+
 toc
     figure(1);
     subplot(1,2,1);
     imagesc(map);
     hold on;
-    scatter(cleaned_path(:,1), cleaned_path(:,2), 'r');
+    plot(path(:,1), path(:,2), 'r');
     hold off;
     subplot(1,2,2);
     imagesc(f);
     hold on;
-    scatter(cleaned_path(:,1), cleaned_path(:,2), 'r');
+    plot(path(:,1), path(:,2), 'r');
     hold off;
-cleaned_path = cleaned_path * dx;
-
+path = path * dx;
+cleaned_path = smoothing(path, 0.2);
 end
 
 % Inputs
