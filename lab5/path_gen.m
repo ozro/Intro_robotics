@@ -1,59 +1,41 @@
 % Inputs:
-% map         - matrix with obstacles as 1 and free space as 0
+% map         - configuration space with obstacles as 1 and free space as 0
 % dx          - number of inches per element in discretized map
 % start, goal - [x, y] of starting and ending positions, in inches
 % visualize   - flag for path finding process visualization
-function path_gen(start, goal, visualize)
+function path_gen(map, dx, start, goal, visualize)
 tic;
-map = load('map.mat');
-map = map.map;
-dx = 0.014;
+
+% Change map to uint8
+map = uint8(map);
 
 % Change to map coorinates
 start = round(start/dx);
 goal = round(goal/dx);
 
-% Define robot radius for configuration space
-r = 0.2/dx;
-
-% Convert to configuration space
-map = config_space(map, r);
-
 % Calculate path using A*
-path = a_star(map, start, goal, visualize);
+[path,f] = a_star(map, start, goal, visualize);
 
 toc
-
-if visualize
     figure(1);
     subplot(1,2,1);
+    imagesc(map);
     hold on;
     plot(path(:,1), path(:,2), 'r');
     hold off;
     subplot(1,2,2);
+    imagesc(f);
     hold on;
     plot(path(:,1), path(:,2), 'r');
     hold off;
-else
-    figure(1);
-    imagesc(map);
-    hold on;
-    plot(path(:,1), path(:,2), 'g');
-    plot(start(1), start(2), 'ro', goal(1), goal(2), 'rx');
-    hold off;
-end
-end
-
-% Converts map to configuration space using robot radius r
-function config = config_space(map, r)
-    config = map;
+path = path * dx;
 end
 
 % Inputs
 % map         - Configuration space matrix with obstacles as 1 
 % start, goal - Starting and ending positions as [x, y] in map coordinates
 % visualize   - Flag for the path finding visualization
-function path = a_star(map, start, goal, visualize)
+function [path, f] = a_star(map, start, goal, visualize)
     % Convert to linear indices
     start_ind = sub2ind(size(map), start(2), start(1));
     goal_ind  = sub2ind(size(map), goal(2), goal(1));
@@ -88,20 +70,25 @@ function path = a_star(map, start, goal, visualize)
             figure(1);
             plot_space = map;
             for i = 1:open_len
-                plot_space(open_set(i)) = 3;
+                plot_space(open_set(i)) = 4;
             end
-            plot_space(current) = 4;
+            plot_space(current) = 5;
+            
+            current_path = get_path(map, prev, current);
+            
             figure(1);
             subplot(1,2,1);
             imagesc(plot_space);
             hold on;
-            plot(start(1), start(2), 'ro', goal(1), goal(2), 'rx');
+            plot(start(1), start(2), 'go', goal(1), goal(2), 'gx');
+            plot(current_path(:,1), current_path(:,2), 'g');
             hold off;
             subplot(1,2,2);
             imagesc(f);
             colorbar;
             hold on;
-            plot(start(1), start(2), 'ro', goal(1), goal(2), 'rx');
+            plot(start(1), start(2), 'go', goal(1), goal(2), 'gx');
+            plot(current_path(:,1), current_path(:,2), 'g');
             hold off;
             drawnow;
         end
@@ -109,16 +96,26 @@ function path = a_star(map, start, goal, visualize)
         % Found the path
         if current == goal_ind
             path = get_path(map, prev, current);
+            if visualize
+                figure(1);
+                subplot(1,2,1);
+                imagesc(plot_space);
+                subplot(1,2,2);
+                imagesc(f);
+                colorbar;
+            end
             return;
         end
         
         % Mark visited nodes, we do not revisit nodes
-        map(current) = 2;
+        map(current) = 3;
         
         % Get neighbors
         [current_row, current_col] = ind2sub(size(map),current);
         for row = -1:1
             for col = -1:1
+                % Eight point connectivity
+                % if row == 0 && col == 0
                 % Four point connectivity
                 if abs(row) == abs(col)
                     continue;
