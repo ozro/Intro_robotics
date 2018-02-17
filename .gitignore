@@ -53,3 +53,4 @@ dkms.conf
 
 # Matlab files
 *.asv
+*.m~
