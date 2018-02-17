@@ -21,11 +21,13 @@ toc
     subplot(1,2,1);
     imagesc(map);
     hold on;
+    plot(cleaned_path(:,1), cleaned_path(:,2), 'r');
     scatter(cleaned_path(:,1), cleaned_path(:,2), 'r');
     hold off;
     subplot(1,2,2);
     imagesc(f);
     hold on;
+    plot(cleaned_path(:,1), cleaned_path(:,2), 'r');
     scatter(cleaned_path(:,1), cleaned_path(:,2), 'r');
     hold off;
 cleaned_path = cleaned_path * dx;
