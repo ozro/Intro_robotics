@@ -16,22 +16,24 @@ goal = round(goal/dx);
 
 % Calculate path using A*
 [path,f] = a_star(map, start, goal, visualize);
+
+% Refine the waypoints
 filtered_waypoints = smoothing(path, 0.2);
 
-toc
-    figure(1);
-    subplot(1,2,1);
-    imagesc(map);
-    hold on;
-    plot(filtered_waypoints(:,1), filtered_waypoints(:,2), 'r');
-    scatter(filtered_waypoints(:,1),filtered_waypoints(:,2), 'r');
-    hold off;
-    subplot(1,2,2);
-    imagesc(f);
-    hold on;
-    plot(filtered_waypoints(:,1), filtered_waypoints(:,2), 'r');
-    scatter(filtered_waypoints(:,1), filtered_waypoints(:,2), 'r');
-    hold off;
+% toc
+%     figure(1);
+%     subplot(1,2,1);
+%     imagesc(map);
+%     hold on;
+%     plot(filtered_waypoints(:,1), filtered_waypoints(:,2), 'r');
+%     scatter(filtered_waypoints(:,1),filtered_waypoints(:,2), 'r');
+%     hold off;
+%     subplot(1,2,2);
+%     imagesc(f);
+%     hold on;
+%     plot(filtered_waypoints(:,1), filtered_waypoints(:,2), 'r');
+%     scatter(filtered_waypoints(:,1), filtered_waypoints(:,2), 'r');
+%     hold off;
 %cleaned_path = cleaned_path * dx;
 
 start_ind = 1;
@@ -50,19 +52,12 @@ while(farthest_feasible < size(filtered_waypoints,1))
         path_sample = [path_sample_y', path_sample_x'];
         if sum(map(sub2ind(size(map), int64(path_sample(:,1)), int64(path_sample(:,2))))) < hitting_threshold
             farthest_feasible = next_ind;
-%         else
-%             sum(map(sub2ind(size(map), int64(path_sample(:,1)), int64(path_sample(:,2)))))
-%             cleaned_path(cleaned_path_size+1,:) = filtered_waypoints(next_ind-1,:);
-%             cleaned_path_size = cleaned_path_size + 1;
-%             start_ind = next_ind-1;
         end
-
     end
-                 cleaned_path(cleaned_path_size+1,:) = filtered_waypoints(farthest_feasible,:);
-             cleaned_path_size = cleaned_path_size + 1;
-             start_ind = farthest_feasible;
-             farthest_feasible = start_ind+1;
-    
+    cleaned_path(cleaned_path_size+1,:) = filtered_waypoints(farthest_feasible,:);
+    cleaned_path_size = cleaned_path_size + 1;
+    start_ind = farthest_feasible;
+    farthest_feasible = start_ind+1;
 end
 cleaned_path(cleaned_path_size+1,:) = filtered_waypoints(end,:);
 cleaned_path_size = cleaned_path_size + 1;
@@ -82,6 +77,7 @@ toc
     plot(cleaned_path(:,1), cleaned_path(:,2), 'r');
     scatter(cleaned_path(:,1), cleaned_path(:,2), 'r');
     hold off;
+% cleaned_path is the refined final waypoints
 cleaned_path = cleaned_path * dx;
 
 end
