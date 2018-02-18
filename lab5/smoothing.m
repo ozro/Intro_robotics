@@ -19,20 +19,21 @@ for i=1:size(smoothed_angles,1)-1
         waypoints= [waypoints;[x(i),y(i)]];
 	end
 end
-waypoints = [waypoints;[x(end), y(end)]]
+waypoints = [waypoints;[x(end), y(end)]];
 
-prev_wp = waypoints(1,:)
-filtered_waypoints = [prev_wp]
+prev_wp = waypoints(1,:);
+filtered_waypoints = [prev_wp];
 
 for i=2:size(waypoints,1)
 	if norm(waypoints(i,:)-prev_wp)<1
-		prev_wp = waypoints(i,:)
+		prev_wp = waypoints(i,:);
 		continue;
 	end
-	filtered_waypoints = [filtered_waypoints;[waypoints(i,:)] ]
-	prev_wp = waypoints(i,:)
+	filtered_waypoints = [filtered_waypoints;[waypoints(i,:)]];
+	prev_wp = waypoints(i,:);
 
 end
+
 
 % % figure
 % % plot(x,y)
