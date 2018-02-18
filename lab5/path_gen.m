@@ -3,10 +3,7 @@
 % dx          - number of inches per element in discretized map
 % start, goal - [x, y] of starting and ending positions, in inches
 % visualize   - flag for path finding process visualization
-function path_gen(map, dx, start, goal, visualize)
-close all;
-tic;
-
+function [waypoints, waypoints_inch] = path_gen(map, dx, start, goal, visualize)
 % Change map to uint8
 map = uint8(map);
 
@@ -15,71 +12,52 @@ start = round(start/dx);
 goal = round(goal/dx);
 
 % Calculate path using A*
+fprintf('Running A* algorithm...');
+tic
 [path,f] = a_star(map, start, goal, visualize);
+fprintf(' Complete!\n\tElapsed time is %f s\n\n', toc);
 
-% Refine the waypoints
-filtered_waypoints = smoothing(path, 0.2);
+% Refine the path to key waypoints
+fprintf('Running path cleaner...');
+tic
+waypoints = clean_path(map, path);
+fprintf(' Complete!\n\tElapsed time is %f s\n', toc);
 
-% toc
-%     figure(1);
-%     subplot(1,2,1);
-%     imagesc(map);
-%     hold on;
-%     plot(filtered_waypoints(:,1), filtered_waypoints(:,2), 'r');
-%     scatter(filtered_waypoints(:,1),filtered_waypoints(:,2), 'r');
-%     hold off;
-%     subplot(1,2,2);
-%     imagesc(f);
-%     hold on;
-%     plot(filtered_waypoints(:,1), filtered_waypoints(:,2), 'r');
-%     scatter(filtered_waypoints(:,1), filtered_waypoints(:,2), 'r');
-%     hold off;
-%cleaned_path = cleaned_path * dx;
-
-start_ind = 1;
-next_ind = 2;
-farthest_feasible = 2;
-num_points = 100;
-cleaned_path = zeros(1000,2);
-cleaned_path(1,:) = filtered_waypoints(start_ind,:);
-cleaned_path_size = 1;
-hitting_threshold = 1;
-
-while(farthest_feasible < size(filtered_waypoints,1))
-    for next_ind = (start_ind+1):size(filtered_waypoints,1)
-        path_sample_x = linspace(filtered_waypoints(start_ind,1), filtered_waypoints(next_ind,1), num_points);
-        path_sample_y = linspace(filtered_waypoints(start_ind,2), filtered_waypoints(next_ind,2),num_points);
-        path_sample = [path_sample_y', path_sample_x'];
-        if sum(map(sub2ind(size(map), int64(path_sample(:,1)), int64(path_sample(:,2))))) < hitting_threshold
-            farthest_feasible = next_ind;
-        end
-    end
-    cleaned_path(cleaned_path_size+1,:) = filtered_waypoints(farthest_feasible,:);
-    cleaned_path_size = cleaned_path_size + 1;
-    start_ind = farthest_feasible;
-    farthest_feasible = start_ind+1;
-end
-cleaned_path(cleaned_path_size+1,:) = filtered_waypoints(end,:);
-cleaned_path_size = cleaned_path_size + 1;
-cleaned_path = cleaned_path(1:cleaned_path_size,:);
-
-toc
+% Visualize final path
     figure(1);
-    subplot(1,2,1);
     imagesc(map);
     hold on;
-    plot(cleaned_path(:,1), cleaned_path(:,2), 'r');
-    scatter(cleaned_path(:,1), cleaned_path(:,2), 'r');
+    plot(path(:,1), path(:,2), 'k:');
+    plot(waypoints(:,1), waypoints(:,2), 'g', 'LineWidth', 1.5);
+    scatter(waypoints(2:end-1,1), waypoints(2:end-1,2), 'ro', 'MarkerFaceColor', 'r');
+    plot(start(1), start(2), 'gs', 'MarkerFaceColor', 'g');
+    plot(goal(1), goal(2), 'rd', 'MarkerFaceColor', 'r');
     hold off;
-    subplot(1,2,2);
+    figure(2)
     imagesc(f);
+    colormap('jet');
+    colorbar;
+    minF = f(path(end,2), path(end, 1));
+    caxis([minF*0.99, max(max(f))]);
+    cmap = colormap;
+    cmap(1,:) = [0 0 0];
+    colormap(cmap);
+    
     hold on;
-    plot(cleaned_path(:,1), cleaned_path(:,2), 'r');
-    scatter(cleaned_path(:,1), cleaned_path(:,2), 'r');
+    plot(path(:,1), path(:,2), 'w', 'LineWidth', 2);
+    plot(path(:,1), path(:,2), 'k', 'LineWidth', 0.5);
+    scatter(waypoints(2:end-1,1), waypoints(2:end-1,2), 'ro', 'MarkerFaceColor', 'r');
+    plot(start(1), start(2), 'gs', 'MarkerFaceColor', 'g');
+    plot(goal(1), goal(2), 'rd', 'MarkerFaceColor', 'r');
     hold off;
-% cleaned_path is the refined final waypoints
-cleaned_path = cleaned_path * dx;
+    figure(1);
+    
+% output final waypoints in inches
+waypoints_inch = waypoints * dx;
+% Make waypoints relative to starting point
+waypoints_inch = waypoints_inch - repmat(waypoints_inch(1, :),size(waypoints_inch,1),1);
 
+dlmwrite('waypoints.txt',waypoints_inch);
 end
 
 % Inputs
@@ -166,9 +144,9 @@ function [path, f] = a_star(map, start, goal, visualize)
         for row = -1:1
             for col = -1:1
                 % Eight point connectivity
-                % if row == 0 && col == 0
+                if row == 0 && col == 0
                 % Four point connectivity
-                if abs(row) == abs(col)
+                %if abs(row) == abs(col)
                     continue;
                 end
                 
@@ -212,6 +190,7 @@ function d = dist(map, current, neighbor)
     [y1, x1] = ind2sub(size(map), current);
     [y2, x2] = ind2sub(size(map), neighbor);
     d = sqrt((y1-y2)^2 + (x1-x2)^2);
+    d = 1;
 end
 
 % Heuristic is just euclidean distance from node to goal
@@ -219,10 +198,10 @@ function h = heuristic(map, node, goal)
     [y, x] = ind2sub(size(map), node);
     [gy, gx] = ind2sub(size(map), goal);
     
-    h = 2*sqrt((y-gy)^2 + (x-gx)^2);
+    h = sqrt((y-gy)^2 + (x-gx)^2);
 end
 
-% Returns an path of [x, y] points in each row
+% Returns an path of [x, y] points in each row, from start to end
 function path = get_path(map, prev, current)
     path = zeros(numel(map),2);
     ind = 1;
@@ -235,6 +214,7 @@ function path = get_path(map, prev, current)
     end
     
     path = path(1:ind-1,:);
+    path = flipud(path);
 end
 
 % Gets the node with the lowest f value, which is the last item in open_set
@@ -258,4 +238,54 @@ function [list, len] = add(list, len, node, f)
             end
         end
     end
+end
+
+% Takes a path and reduces the amount of waypoints, minimizing turns
+function [waypoints] = clean_path(map, path)
+ % The farthest node that can be reached in a straight line from the
+ % prev node without intersecting obstacles
+farthest_node = 2;
+waypoints = zeros(numel(map),2);
+waypoints(1,:) = path(1,:);
+waypoint_size = 1;
+hitting_threshold = 1;
+
+start_node = 1;
+while(farthest_node < size(path,1))
+    % Check if line between start and end will intersect an obstacle
+    for end_node = (start_node+1):size(path,1)
+        % Use Bresenham's Line Algorithm
+        d = path(end_node,:) - path(start_node,:);
+        
+        if d(1) == 0
+            subscripts = [path(start_node, 1):path(end_node, 1), ...
+                path(start_node, 2):path(end_node, 2)];
+        else
+            slope = abs(d(2)/d(1));
+            error = 0;
+            subscripts = zeros(numel(map), 2);
+            len = 1;
+            y = path(start_node, 2);
+            for x = path(start_node, 1):path(end_node, 1)
+                subscripts(len, :) = [y, x];
+                len = len + 1;
+                error = error + slope;
+                while error >= 0.5
+                    y = y + sign(d(2));
+                    error = error - 1;
+                end
+            end
+            subscripts = subscripts(1:len-1, :);
+        end
+        inds = sub2ind(size(map), subscripts(:,1), subscripts(:,2));
+        if sum(map(inds)) < hitting_threshold
+            farthest_node = end_node;
+        end
+    end
+    waypoint_size = waypoint_size + 1;
+    waypoints(waypoint_size,:) = path(farthest_node,:);
+    start_node = farthest_node;
+    farthest_node = start_node+1;
+end
+waypoints = waypoints(1:waypoint_size,:);
 end
