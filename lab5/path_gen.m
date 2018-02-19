@@ -20,7 +20,7 @@ fprintf(' Complete!\n\tElapsed time is %f s\n\n', toc);
 % Refine the path to key waypoints
 fprintf('Running path cleaner...');
 tic
-waypoints = clean_path(path);
+waypoints = clean_path(map, path);
 fprintf(' Complete!\n\tElapsed time is %f s\n', toc);
 
 % Visualize final path
@@ -58,7 +58,7 @@ waypoints_inch = waypoints * dx;
 waypoints_inch(:, 2) = 48*ones(size(waypoints_inch(:,2))) - waypoints_inch(:, 2);
 waypoints_inch = waypoints_inch - repmat(waypoints_inch(1, :), size(waypoints_inch,1), 1);
 
-dlmwrite('waypoints.txt',waypoints_inch);
+dlmwrite('waypoints.txt',waypoints_inch');
 end
 
 % Inputs
@@ -195,7 +195,7 @@ function distance = dist(map, prev, current, neighbor)
     curr_angle = atan2((y2-y1),(x2-x1));
     prev_angle = atan2((y1-y0),(x1-x0));
     if(curr_angle ~= prev_angle)
-        distance = distance + 100;
+        distance = distance + 1;
     end
 end
 
@@ -247,86 +247,37 @@ function [list, len] = add(list, len, node, f)
 end
 
 % Takes a path and reduces the amount of waypoints, minimizing turns
-function [waypoints] = clean_path(path)
+function [waypoints] = clean_path(map, path)
+start_ind = 1;
+farthest_feasible = 2;
+num_points = 100;
+cleaned_path = zeros(1000,2);
+cleaned_path(1,:) = path(start_ind,:);
+cleaned_path_size = 1;
+hitting_threshold = 1;
 
-waypoints = zeros(size(path, 1), 2);
-waypoints(1, :) = path(1,:);
-len = 1;
-for i = 3:size(path,1)
-    point0 = path(i-2, :);
-    point1 = path(i-1, :);
-    point2 = path(i, :);
-    
-    prev_ang = atan2(point1(2)-point0(2), point1(1)-point0(1));
-    curr_ang = atan2(point2(2)-point1(2), point2(1)-point1(1));
-
-    if angdiff(prev_ang, curr_ang) ~= 0
-        len = len + 1;
-        waypoints(len,:) = point1;
-    end
-end
-len = len + 1;
-waypoints(len, :) = path(end,:);
-waypoints = waypoints(1:len, :);
-
-%  % The farthest node that can be reached in a straight line from the
-%  % prev node without intersecting obstacles
-% farthest_node = 2;
-% waypoints = zeros(numel(map),2);
-% waypoints(1,:) = path(1,:);
-% waypoint_size = 1;
-% 
-% start_node = 1;
-% while(farthest_node < size(path,1))
-%     % Check if line between start and end will intersect an obstacle
-%     for end_node = (start_node+1):size(path,1)
-%         % Use Bresenham's Line Algorithm
-%         d = path(end_node,:) - path(start_node,:);
-%         
-%         if d(1) == 0
-%             y0 = path(start_node, 2);
-%             y1 = path(end_node, 2);
-%             if y1 > y0
-%                 y_array = y0:y1;
-%             else
-%                 y_array = y0:-1:y1;
-%             end
-%             len = size(y_array', 1);
-%             subscripts = zeros(len, 2);
-%             subscripts(:,1) = ones(len, 1) * path(start_node, 1);
-%             subscripts(:,2) = y_array;
+while(farthest_feasible < size(path,1))
+    for next_ind = (start_ind+1):size(path,1)
+        path_sample_x = linspace(path(start_ind,1), path(next_ind,1), num_points);
+        path_sample_y = linspace(path(start_ind,2), path(next_ind,2),num_points);
+        path_sample = [path_sample_y', path_sample_x'];
+        if sum(map(sub2ind(size(map), int64(path_sample(:,1)), int64(path_sample(:,2))))) < hitting_threshold
+            farthest_feasible = next_ind;
 %         else
-%             slope = d(2)/d(1);
-%             error = 0;
-%             subscripts = zeros(numel(map), 2);
-%             len = 1;
-%             y = path(start_node, 2);
-%             if path(start_node, 1) < path(end_node, 1)
-%                 x_array = path(start_node, 1):path(end_node,1);
-%             else
-%                 x_array = path(end_node, 1):-1:path(start_node,1);
-%             end
-%             for x = x_array
-%                 subscripts(len, :) = [y, x];
-%                 len = len + 1;
-%                 error = error + abs(slope);
-%                 while error >= 0.5
-%                     y = y + sign(d(2));
-%                     error = error - 1;
-%                 end
-%             end
-%             subscripts = subscripts(1:len-1, :);
-%         end
-%         subscripts
-%         inds = sub2ind(size(map), subscripts(:,1), subscripts(:,2));
-%         if sum(map(inds)) == 0
-%             farthest_node = end_node;
-%         end
-%     end
-%     waypoint_size = waypoint_size + 1;
-%     waypoints(waypoint_size,:) = path(farthest_node,:);
-%     start_node = farthest_node;
-%     farthest_node = start_node+1;
-% end
-% waypoints = waypoints(1:waypoint_size,:);
+%             sum(map(sub2ind(size(map), int64(path_sample(:,1)), int64(path_sample(:,2)))))
+%             cleaned_path(cleaned_path_size+1,:) = filtered_waypoints(next_ind-1,:);
+%             cleaned_path_size = cleaned_path_size + 1;
+%             start_ind = next_ind-1;
+        end
+
+    end
+                 cleaned_path(cleaned_path_size+1,:) = path(farthest_feasible,:);
+             cleaned_path_size = cleaned_path_size + 1;
+             start_ind = farthest_feasible;
+             farthest_feasible = start_ind+1;
+    
+end
+cleaned_path(cleaned_path_size+1,:) = path(end,:);
+cleaned_path_size = cleaned_path_size + 1;
+waypoints = cleaned_path(1:cleaned_path_size,:);
 end
