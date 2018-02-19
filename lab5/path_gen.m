@@ -57,7 +57,7 @@ waypoints_inch = waypoints * dx;
 % Make waypoints relative to starting point
 waypoints_inch(:, 2) = 48*ones(size(waypoints_inch(:,2))) - waypoints_inch(:, 2);
 waypoints_inch = waypoints_inch - repmat(waypoints_inch(1, :), size(waypoints_inch,1), 1);
-
+waypoints_inch = waypoints_inch(2:end-1,:);
 dlmwrite('waypoints.txt',waypoints_inch' * 25.4);
 end
 
