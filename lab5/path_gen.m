@@ -195,7 +195,7 @@ function distance = dist(map, prev, current, neighbor)
     curr_angle = atan2((y2-y1),(x2-x1));
     prev_angle = atan2((y1-y0),(x1-x0));
     if(curr_angle ~= prev_angle)
-        distance = distance + 1;
+        distance = distance + 20;
     end
 end
 
