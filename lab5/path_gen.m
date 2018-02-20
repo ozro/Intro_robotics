@@ -4,6 +4,11 @@
 % dx          - number of inches per element in discretized map
 % start, goal - [x, y] of starting and ending positions, in inches
 % visualize   - flag for path finding process visualization
+
+% Outputs:
+% waypoints         - a list of waypoints relative to the starting position
+% waypoints_inch    - a list of waypoints in inches
+% waypoints.txt     - a text file containing waypoinst in millimeters
 function [waypoints, waypoints_inch] = path_gen(map, wavemap, dx, start, goal, visualize)
 % Change map to uint8
 map = uint8(map);
@@ -21,7 +26,7 @@ fprintf(' Complete!\n\tElapsed time is %f s\n\n', toc);
 % Refine the path to key waypoints
 fprintf('Running path cleaner...');
 tic
-waypoints = clean_path(map, path);
+waypoints = clean_path(path);
 fprintf(' Complete!\n\tElapsed time is %f s\n', toc);
 
 % Visualize final path
@@ -198,7 +203,10 @@ function distance = dist(map, wavemap, peak, prev, current, neighbor)
     [y2, x2] = ind2sub(size(map), neighbor);
     distance = sqrt((y1-y2)^2 + (x1-x2)^2)/2;
     
+    % Weight paths by distance to closest obstacle
     distance = distance + (peak-wavemap(current));
+
+    % Weight paths by number of turns
     curr_angle = atan2((y2-y1),(x2-x1));
     prev_angle = atan2((y1-y0),(x1-x0));
     diff = abs(angdiff(curr_angle, prev_angle));
@@ -228,6 +236,8 @@ function path = get_path(map, prev, current)
     end
     
     path = path(1:ind-1,:);
+    
+    % Make path go from start to finish
     path = flipud(path);
 end
 
@@ -254,8 +264,8 @@ function [list, len] = add(list, len, node, f)
     end
 end
 
-% Takes a path and reduces the amount of waypoints, minimizing turns
-function [waypoints] = clean_path(map, path)
+% Takes a path and pick waypoints where the angle of the path changes
+function [waypoints] = clean_path(path)
 waypoints = zeros(size(path));
 len = 1;
 waypoints(len, :) = path(1,:);
@@ -274,34 +284,4 @@ end
 len = len + 1;
 waypoints(len, :) = path(end, :);
 waypoints = waypoints(1:len, :);
-% start_ind = 1;
-% farthest_feasible = 2;
-% num_points = 100;
-% cleaned_path = zeros(1000,2);
-% cleaned_path(1,:) = path(start_ind,:);
-% cleaned_path_size = 1;
-% hitting_threshold = 1;
-% 
-% while(farthest_feasible < size(path,1))
-%     for next_ind = (start_ind+1):size(path,1)
-%         path_sample_x = linspace(path(start_ind,1), path(next_ind,1), num_points);
-%         path_sample_y = linspace(path(start_ind,2), path(next_ind,2),num_points);
-%         path_sample = [path_sample_y', path_sample_x'];
-%         if sum(map(sub2ind(size(map), int64(path_sample(:,1)), int64(path_sample(:,2))))) < hitting_threshold
-%             farthest_feasible = next_ind;
-% %         else
-% %             sum(map(sub2ind(size(map), int64(path_sample(:,1)), int64(path_sample(:,2)))))
-% %             cleaned_path(cleaned_path_size+1,:) = filtered_waypoints(next_ind-1,:);
-% %             cleaned_path_size = cleaned_path_size + 1;
-% %             start_ind = next_ind-1;
-%         end
-% 
-%     end
-%                  cleaned_path(cleaned_path_size+1,:) = path(farthest_feasible,:);
-%              cleaned_path_size = cleaned_path_size + 1;
-%              start_ind = farthest_feasible;
-%              farthest_feasible = start_ind+1;
-%     
-% end
-% waypoints = cleaned_path(1:cleaned_path_size,:);
 end
