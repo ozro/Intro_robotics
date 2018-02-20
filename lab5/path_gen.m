@@ -1,9 +1,10 @@
 % Inputs:
 % map         - configuration space with obstacles as 1 and free space as 0
+% wavemap     - map wavefronts propagated from obstacles
 % dx          - number of inches per element in discretized map
 % start, goal - [x, y] of starting and ending positions, in inches
 % visualize   - flag for path finding process visualization
-function [waypoints, waypoints_inch] = path_gen(map, dx, start, goal, visualize)
+function [waypoints, waypoints_inch] = path_gen(map, wavemap, dx, start, goal, visualize)
 % Change map to uint8
 map = uint8(map);
 
@@ -14,7 +15,7 @@ goal = round(goal/dx);
 % Calculate path using A*
 fprintf('Running A* algorithm...');
 tic
-[path,f] = a_star(map, start, goal, visualize);
+[path,f] = a_star(map, wavemap, start, goal, visualize);
 fprintf(' Complete!\n\tElapsed time is %f s\n\n', toc);
 
 % Refine the path to key waypoints
@@ -24,6 +25,7 @@ waypoints = clean_path(map, path);
 fprintf(' Complete!\n\tElapsed time is %f s\n', toc);
 
 % Visualize final path
+close all;
     figure(1);
     hold off;
     imagesc(map);
@@ -33,7 +35,8 @@ fprintf(' Complete!\n\tElapsed time is %f s\n', toc);
     scatter(waypoints(2:end-1,1), waypoints(2:end-1,2), 'ro', 'MarkerFaceColor', 'r');
     plot(start(1), start(2), 'gs', 'MarkerFaceColor', 'g');
     plot(goal(1), goal(2), 'rd', 'MarkerFaceColor', 'r');
-    figure(2)
+    
+    figure(2);
     hold off;
     imagesc(f);
     colormap('jet');
@@ -57,7 +60,7 @@ waypoints_inch = waypoints * dx;
 % Make waypoints relative to starting point
 waypoints_inch(:, 2) = 48*ones(size(waypoints_inch(:,2))) - waypoints_inch(:, 2);
 waypoints_inch = waypoints_inch - repmat(waypoints_inch(1, :), size(waypoints_inch,1), 1);
-waypoints_inch = waypoints_inch(2:end-1,:);
+waypoints_inch = waypoints_inch(2:end,:);
 dlmwrite('waypoints.txt',waypoints_inch' * 25.4);
 end
 
@@ -65,13 +68,16 @@ end
 % map         - Configuration space matrix with obstacles as 1 
 % start, goal - Starting and ending positions as [x, y] in map coordinates
 % visualize   - Flag for the path finding visualization
-function [path, f] = a_star(map, start, goal, visualize)
+function [path, f] = a_star(map, wavemap, start, goal, visualize)
     % Convert to linear indices
     start_ind = sub2ind(size(map), start(2), start(1));
     goal_ind  = sub2ind(size(map), goal(2), goal(1));
     
     % Initialize data structures
     path = zeros(2,1);
+    
+    % Calculate maximum separation from obstacles
+    wavepeak = max(max(wavemap));
     
     % Open set stores [node, fscore] in each row
     % Maintains order of highest fscore to lowest f score
@@ -97,7 +103,7 @@ function [path, f] = a_star(map, start, goal, visualize)
                 
         % Plots
         if visualize
-            figure(1);
+            figure(3);
             plot_space = map;
             for i = 1:open_len
                 plot_space(open_set(i)) = 4;
@@ -106,7 +112,7 @@ function [path, f] = a_star(map, start, goal, visualize)
             
             current_path = get_path(map, prev, current);
             
-            figure(1);
+            figure(2);
             subplot(1,2,1);
             imagesc(plot_space);
             hold on;
@@ -167,7 +173,7 @@ function [path, f] = a_star(map, start, goal, visualize)
                 end
                 
                 % Check if this path is shorter than the previous paths
-                new_g = g(current) + dist(map, prev, current, neighbor);
+                new_g = g(current) + dist(map, wavemap, wavepeak, prev, current, neighbor);
                 if new_g < g(neighbor)
                     prev(neighbor) = current;
                     g(neighbor) = new_g;
@@ -186,16 +192,18 @@ function [path, f] = a_star(map, start, goal, visualize)
 end
 
 % Euclidean distance metric
-function distance = dist(map, prev, current, neighbor)
+function distance = dist(map, wavemap, peak, prev, current, neighbor)
     [y0, x0] = ind2sub(size(map), prev(current));
     [y1, x1] = ind2sub(size(map), current);
     [y2, x2] = ind2sub(size(map), neighbor);
-    distance = sqrt((y1-y2)^2 + (x1-x2)^2);
+    distance = sqrt((y1-y2)^2 + (x1-x2)^2)/2;
     
+    distance = distance + (peak-wavemap(current));
     curr_angle = atan2((y2-y1),(x2-x1));
     prev_angle = atan2((y1-y0),(x1-x0));
-    if(curr_angle ~= prev_angle)
-        distance = distance + 20;
+    diff = abs(angdiff(curr_angle, prev_angle));
+    if(diff > 0)
+        distance = distance + 50;
     end
 end
 
@@ -204,7 +212,7 @@ function h = heuristic(map, node, goal)
     [y, x] = ind2sub(size(map), node);
     [gy, gx] = ind2sub(size(map), goal);
     
-    h = sqrt((y-gy)^2 + (x-gx)^2);
+    h = sqrt((y-gy)^2 + (x-gx)^2)/2;
 end
 
 % Returns an path of [x, y] points in each row, from start to end
@@ -248,36 +256,52 @@ end
 
 % Takes a path and reduces the amount of waypoints, minimizing turns
 function [waypoints] = clean_path(map, path)
-start_ind = 1;
-farthest_feasible = 2;
-num_points = 100;
-cleaned_path = zeros(1000,2);
-cleaned_path(1,:) = path(start_ind,:);
-cleaned_path_size = 1;
-hitting_threshold = 1;
-
-while(farthest_feasible < size(path,1))
-    for next_ind = (start_ind+1):size(path,1)
-        path_sample_x = linspace(path(start_ind,1), path(next_ind,1), num_points);
-        path_sample_y = linspace(path(start_ind,2), path(next_ind,2),num_points);
-        path_sample = [path_sample_y', path_sample_x'];
-        if sum(map(sub2ind(size(map), int64(path_sample(:,1)), int64(path_sample(:,2))))) < hitting_threshold
-            farthest_feasible = next_ind;
-%         else
-%             sum(map(sub2ind(size(map), int64(path_sample(:,1)), int64(path_sample(:,2)))))
-%             cleaned_path(cleaned_path_size+1,:) = filtered_waypoints(next_ind-1,:);
-%             cleaned_path_size = cleaned_path_size + 1;
-%             start_ind = next_ind-1;
-        end
-
+waypoints = zeros(size(path));
+len = 1;
+waypoints(len, :) = path(1,:);
+for i = 3:size(path, 1)-1
+    p0 = path(i - 1, :);
+    p1 = path(i,:);
+    p2 = path(i+1, :);
+    prev_angle = atan2((p1(2)-p0(2)),(p1(1)-p0(1)));
+    curr_angle = atan2((p2(2)-p1(2)),(p2(1)-p1(1)));
+    diff = abs(angdiff(curr_angle, prev_angle));
+    if(diff > 0)
+        len = len + 1;
+        waypoints(len,:) = p1;
     end
-                 cleaned_path(cleaned_path_size+1,:) = path(farthest_feasible,:);
-             cleaned_path_size = cleaned_path_size + 1;
-             start_ind = farthest_feasible;
-             farthest_feasible = start_ind+1;
-    
 end
-cleaned_path(cleaned_path_size+1,:) = path(end,:);
-cleaned_path_size = cleaned_path_size + 1;
-waypoints = cleaned_path(1:cleaned_path_size,:);
+len = len + 1;
+waypoints(len, :) = path(end, :);
+waypoints = waypoints(1:len, :);
+% start_ind = 1;
+% farthest_feasible = 2;
+% num_points = 100;
+% cleaned_path = zeros(1000,2);
+% cleaned_path(1,:) = path(start_ind,:);
+% cleaned_path_size = 1;
+% hitting_threshold = 1;
+% 
+% while(farthest_feasible < size(path,1))
+%     for next_ind = (start_ind+1):size(path,1)
+%         path_sample_x = linspace(path(start_ind,1), path(next_ind,1), num_points);
+%         path_sample_y = linspace(path(start_ind,2), path(next_ind,2),num_points);
+%         path_sample = [path_sample_y', path_sample_x'];
+%         if sum(map(sub2ind(size(map), int64(path_sample(:,1)), int64(path_sample(:,2))))) < hitting_threshold
+%             farthest_feasible = next_ind;
+% %         else
+% %             sum(map(sub2ind(size(map), int64(path_sample(:,1)), int64(path_sample(:,2)))))
+% %             cleaned_path(cleaned_path_size+1,:) = filtered_waypoints(next_ind-1,:);
+% %             cleaned_path_size = cleaned_path_size + 1;
+% %             start_ind = next_ind-1;
+%         end
+% 
+%     end
+%                  cleaned_path(cleaned_path_size+1,:) = path(farthest_feasible,:);
+%              cleaned_path_size = cleaned_path_size + 1;
+%              start_ind = farthest_feasible;
+%              farthest_feasible = start_ind+1;
+%     
+% end
+% waypoints = cleaned_path(1:cleaned_path_size,:);
 end
