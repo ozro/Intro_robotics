@@ -15,6 +15,68 @@ const int THRESHOLD = 40;
 const int MOTOR_POWER = 30;	 //Base motor power to control the speed
 const int UPDATE_INTERVAL = 1; //Delay updates by x miliseconds
 
+//Robot's positions
+float robot_X = 12, robot_Y = 0.0, robot_TH = 0.0, robot_PHI = 0.0;
+
+int velocityUpdateInterval = 1;
+
+//Wheel diameter and circumference in inch
+const float WHEEL_DIAMETER = 2.18;
+const float WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * PI;
+//Distance between wheels in inch
+const float WHEEL_DISTANCE = 6.5;
+//Number of ticks per inch
+const float TICKS_PER_INCH = 360/WHEEL_CIRCUMFERENCE;
+
+task dead_reckoning()
+{
+	clearTimer(T1);
+	float last_enc_L = nMotorEncoder[motorLeft];
+	float last_enc_R = nMotorEncoder[motorRight];
+
+	while(1)
+	{
+		//
+		// Fill in code for numerical integration / position estimation here
+		//
+		int dt = time1[T1];
+		if(dt == 0)
+		{
+			continue;
+		}
+		clearTimer(T1);
+
+		int dEncL = nMotorEncoder[motorLeft] - last_enc_L;
+		int dEncR = nMotorEncoder[motorRight] - last_enc_R;
+		last_enc_L = nMotorEncoder[motorLeft];
+		last_enc_R = nMotorEncoder[motorRight];
+
+		//update robot_x and robot_Y
+		float dispL = dEncL / TICKS_PER_INCH;
+		float dispR = dEncR / TICKS_PER_INCH;
+		float disp = (dispL + dispR)/2;
+		float angDisp = (dispR - dispL)/WHEEL_DISTANCE;
+		robot_TH = robot_TH + angDisp/2;
+		robot_X = robot_X + cos(robot_TH)*disp;
+		robot_Y = robot_Y + sin(robot_TH)*disp;
+		robot_TH = robot_TH + angDisp/2;
+
+		if(robot_TH> 2*PI)
+		{
+			robot_TH = robot_TH - 2*PI;
+		}
+
+		robot_PHI = atan2(robot_Y, robot_X);
+
+		nxtDisplayTextLine(0, "X: %f", robot_X);
+		nxtDisplayTextLine(1, "Y: %f", robot_Y);
+		nxtDisplayTextLine(2, "t: %f", robot_TH / PI * 180);
+		nxtDisplayTextLIne(3, "p: %f", robot_PHI/PI*180);
+
+		wait1Msec(velocityUpdateInterval);
+	}
+}
+
 /*****************************************
 * Main function - Needs changing
 *****************************************/
@@ -32,29 +94,26 @@ task main()
 	// Find the line by turning left, then if line is not found within angle, turn right
 	while(SensorValue[S2] >= THRESHOLD ){
 		nxtDisplayTextLine(0, "Searching");
-			motor[motorLeft] = -1*MOTOR_POWER;
-			motor[motorRight] = MOTOR_POWER;
+			motor[motorLeft] = MOTOR_POWER;
+			motor[motorRight] = -1*MOTOR_POWER;
 	}
+	startTask(dead_reckoning);
 
 	// Start line following
 	while(1){
-		nxtDisplayTextLine(0, "Following");
 		if(SensorValue[S2] < THRESHOLD){ // Seeing the black line
-			nxtDisplayTextLine(1, "Black");
-			motor[motorRight] = MOTOR_POWER;
-			motor[motorLeft] = MOTOR_POWER +feedforward; //Left Motor
-			nxtDisplayTextLine(2, "MotorR: %f", motor[motorRight]);
-				nxtDisplayTextLine(3, "MotorL: %f", motor[motorLeft]);
-				nxtDisplayTextLine(4, "Light: %d", SensorValue[S2]);
-
+			motor[motorLeft] = MOTOR_POWER;
+			motor[motorRight] = MOTOR_POWER+feedforward;
 		}
 		else{
-			nxtDisplayTextLine(1, "White");
-			motor[motorRight] = MOTOR_POWER -additional_ff/2;
-			motor[motorLeft] = MOTOR_POWER +feedforward+additional_ff/2; //Left Motor
-			nxtDisplayTextLine(2, "MotorR: %f", motor[motorRight]);
-				nxtDisplayTextLine(3, "MotorL: %f", motor[motorLeft]);
-					nxtDisplayTextLine(4, "Light: %d", SensorValue[S2]);
+			motor[motorLeft] = MOTOR_POWER -additional_ff/2;
+			motor[motorRight] = MOTOR_POWER +feedforward+additional_ff/2;
+		}
+		if(robot_PHI >= PI/2)
+		{
+			motor[motorRight] = 0;
+			motor[motorLeft] = 0; //Left Motor
+			while(1){}
 		}
 		wait1Msec(UPDATE_INTERVAL);
 	}
