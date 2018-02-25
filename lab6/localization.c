@@ -14,16 +14,20 @@
 **********************************************/
 
 // Map setup
-const char map[16] = {0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0};
+const char map[16] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1};
 
 float belief[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int wall[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
+int sec_count = 0;
+int goal_sec = 9;
+
 //Set parameters
+const int CONFIG_COUNT = 32;
 const float WALL_RADIUS = 21;
 const int THRESHOLD = 40;
-const float SONAR_THRESHOLD = 35;
-const int MOTOR_POWER = 30;	 //Base motor power to control the speed
+const float SONAR_THRESHOLD = 30;
+const int MOTOR_POWER = 35;	 //Base motor power to control the speed
 const int UPDATE_INTERVAL = 1; //Delay updates by x miliseconds
 const float WALL_WIDTH = 6/(2*PI*WALL_RADIUS);
 
@@ -35,20 +39,16 @@ float last_TH;
 int velocityUpdateInterval = 1;
 
 // Flags
-	bool configured = false;
+bool configured = false;
+bool done = false;
 
 //Wheel diameter and circumference in inch
-const float WHEEL_DIAMETER = 2.18;
+const float WHEEL_DIAMETER = 2.175;
 const float WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * PI;
 //Distance between wheels in inch
 const float WHEEL_DISTANCE = 6.5;
 //Number of ticks per inch
 const float TICKS_PER_INCH = 360/WHEEL_CIRCUMFERENCE;
-
-int count = 0;
-bool equals(float val, float target, float epsilon){
-	return abs(val - target) <= epsilon;
-}
 
 task dead_reckoning()
 {
@@ -61,7 +61,6 @@ task dead_reckoning()
 	bool seen_gap = false;
 	bool seen_wall = false;
 	bool homestretch = false;
-
 	float goal_TH;
 
 	while(1)
@@ -70,7 +69,7 @@ task dead_reckoning()
 		// Dead Reckoning
 		//
 
-		if(time1[T2] < 2000)
+		if(time1[T2] < 4000)
 		{
 			continue;
 		}
@@ -99,7 +98,7 @@ task dead_reckoning()
 		float dispL = dEncL / TICKS_PER_INCH;
 		float dispR = dEncR / TICKS_PER_INCH;
 		float disp = (dispL + dispR)/2;
-		float angDisp = (dispR - dispL)/WHEEL_DISTANCE;
+		float angDisp = (dispL - dispR)/WHEEL_DISTANCE;
 		robot_TH = robot_TH + angDisp/2;
 		robot_X = robot_X + cos(robot_TH)*disp;
 		robot_Y = robot_Y + sin(robot_TH)*disp;
@@ -129,7 +128,7 @@ task dead_reckoning()
 				playSound(soundBlip);
 			}
 			else if (isWall && !seen_wall){
-				goal_TH = robot_TH + WALL_WIDTH*2.5;
+				goal_TH = robot_TH + WALL_WIDTH*2.7;
 				if (goal_TH > 2*PI){
 					goal_TH -= 2*PI;
 				}
@@ -143,39 +142,64 @@ task dead_reckoning()
 					robot_X = 12;
 					robot_TH = PI/2;
 					last_TH = robot_TH - PI/4;
-					curr_sec = 0;
+					last_sec = -2;
+					curr_sec = -1;
 				}
 			}
 		}
-		if (configured){ //We are configured
-
+		else{ //We are configured
 			if(abs(robot_TH - last_TH) > PI/8){ //We have moved one section
 				curr_sec = (curr_sec + 1)%16;
-				last_TH = robot_TH;
-				count += 1;
-
-				nxtDisplayTextLine(3, "Last: %d", last_sec);
-				nxtDisplayTextLine(4, "Current: %d", curr_sec);
-				nxtDisplayTextLine(6, "Count %d", count);
-				playSound(soundBlip);
-				if(isWall){
-					wall[curr_sec] = 1;
-				}
-				else{
-					wall[curr_sec] = 0;
-				}
-
-				for (int i = 0; i < 16; i++){
-					if ((map[i] == 1 && isWall) || (map[i] == 0 && !isWall)){
-						int index = (i-curr_sec);
-						if(index < 0){
-							index += 16;
+				sec_count += 1;
+				if(sec_count >= CONFIG_COUNT && !homestretch){ //Completed localization, get current sec
+					playSound(soundFastUpwardTones);
+					homestretch = true;
+					int belief_sec = 0;
+					int maxBelief = 0;
+					for(int i = 0; i < 16; i++){
+						if(belief[i] > maxBelief){
+							maxBelief = belief[i];
+							belief_sec = (i + curr_sec)%16;
 						}
-						belief[index] += 1;
+					}
+					curr_sec = belief_sec;
+				}
+				if(homestretch){
+					done = curr_sec == goal_sec;
+				}
+				last_TH = robot_TH;
+
+				nxtDisplayTextLine(4, "Current: %d", curr_sec);
+				playSound(soundBlip);
+				if(!homestretch){
+					if(isWall){
+						wall[curr_sec] = 1;
+						playSound(soundBlip);
+					}
+					else{
+						wall[curr_sec] = 0;
+					}
+					for (int i = 0; i < 16; i++){
+						if ((map[i] == 1 && isWall) || (map[i] == 0 && !isWall)){
+							int ind1 = (i-curr_sec-1)%16;
+							int ind2 = (i-curr_sec)%16;
+							int ind3 = (i-curr_sec+1)%16;
+							if(ind1 < 0){
+								ind1 += 16;
+							}
+							if(ind2 < 0){
+								ind2 += 16;
+							}
+							if(ind3 < 0){
+								ind3 += 16;
+							}
+							belief[ind1] += 0.25;
+							belief[ind2] += 1;
+							belief[ind3] += 0.25;
+						}
 					}
 				}
 			}
-
 		}
 		wait1Msec(velocityUpdateInterval);
 	}
@@ -194,31 +218,27 @@ task main()
 
 	clearTimer(T1);
 
-	float feedforward = .3*MOTOR_POWER;
-	float additional_ff = .8*MOTOR_POWER;
-	// Find the line by turning left, then if line is not found within angle, turn right
-	while(SensorValue[S2] >= THRESHOLD ){
-		nxtDisplayTextLine(0, "Searching");
-			motor[motorLeft] = -1*MOTOR_POWER;
-			motor[motorRight] = MOTOR_POWER;
-	}
+	float feedforward   = .3*MOTOR_POWER;
+	float additional_ff = .7*MOTOR_POWER;
+
 	startTask(dead_reckoning);
 
 	// Start line following
 	while(1){
 
 		if(SensorValue[S2] < THRESHOLD){ // Seeing the black line
-			motor[motorLeft] = MOTOR_POWER;
-			motor[motorRight] = MOTOR_POWER+feedforward;
+			motor[motorRight]  = MOTOR_POWER;
+			motor[motorLeft] = MOTOR_POWER + feedforward;
 		}
-		else{
-			motor[motorLeft] = MOTOR_POWER -additional_ff/2;
-			motor[motorRight] = MOTOR_POWER +feedforward+additional_ff/2;
+		else{ // Seeing the white line
+			motor[motorRight]  = MOTOR_POWER - additional_ff/2;
+			motor[motorLeft] = MOTOR_POWER + feedforward + additional_ff/2;
 		}
-		if(equals(robot_TH, PI/2- 0.015, 0.01))
+		if(done)
 		{
+			playSound(soundDownwardTones);
+			motor[motorLeft]  = 0;
 			motor[motorRight] = 0;
-			motor[motorLeft] = 0; //Left Motor
 			return;
 		}
 		wait1Msec(UPDATE_INTERVAL);
