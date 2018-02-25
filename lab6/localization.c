@@ -1,3 +1,4 @@
+#pragma config(Sensor, S1,     sonarSensor,    sensorSONAR)
 #pragma config(Sensor, S2,     lightSensor,    sensorLightActive)
 #pragma config(Motor,  motorA,          motorRight,    tmotorNXT, PIDControl, encoder)
 #pragma config(Motor,  motorC,          motorLeft,     tmotorNXT, PIDControl, encoder)
@@ -10,15 +11,28 @@
 
 * Feel free to modify any part of these codes.
 **********************************************/
+
+// Map setup
+const char map[16] = {0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0};
+
+float belief[16];
+
 //Set parameters
+const float WALL_RADIUS = 21;
 const int THRESHOLD = 40;
+const float SONAR_THRESHOLD = 35;
 const int MOTOR_POWER = 30;	 //Base motor power to control the speed
 const int UPDATE_INTERVAL = 1; //Delay updates by x miliseconds
+const float WALL_WIDTH = 6/(2*PI*WALL_RADIUS);
 
 //Robot's positions
-float robot_X = 12, robot_Y = 0.0, robot_TH = 0.0, robot_PHI = 0.0;
+float robot_X = 12, robot_Y = 0.0, robot_TH = PI/2, robot_PHI = 0.0;
+int last_sec, curr_sec;
 
 int velocityUpdateInterval = 1;
+
+// Flags
+	bool configured = false;
 
 //Wheel diameter and circumference in inch
 const float WHEEL_DIAMETER = 2.18;
@@ -28,17 +42,43 @@ const float WHEEL_DISTANCE = 6.5;
 //Number of ticks per inch
 const float TICKS_PER_INCH = 360/WHEEL_CIRCUMFERENCE;
 
+bool equals(float val, float target, float epsilon){
+	return abs(val - target) <= epsilon;
+}
+
 task dead_reckoning()
 {
 	clearTimer(T1);
-	float last_enc_L = nMotorEncoder[motorLeft];
-	float last_enc_R = nMotorEncoder[motorRight];
+	clearTimer(T2);
+
+	bool init_enc = true;
+	float last_enc_L, last_enc_R;
+
+	bool seen_gap = false;
+	bool seen_wall = false;
+	bool homestretch = false;
+
+	float goal_TH;
 
 	while(1)
 	{
 		//
-		// Fill in code for numerical integration / position estimation here
+		// Dead Reckoning
 		//
+
+		if(time1[T2] < 2000)
+		{
+			continue;
+		}
+		else if(init_enc)
+		{
+			nMotorEncoder[motorRight] = 0;
+			nMotorEncoder[motorLeft] = 0;
+			last_enc_L = nMotorEncoder[motorLeft];
+			last_enc_R = nMotorEncoder[motorRight];
+			init_enc = false;
+		}
+
 		int dt = time1[T1];
 		if(dt == 0)
 		{
@@ -68,19 +108,83 @@ task dead_reckoning()
 
 		robot_PHI = atan2(robot_Y, robot_X);
 
-		nxtDisplayTextLine(0, "X: %f", robot_X);
-		nxtDisplayTextLine(1, "Y: %f", robot_Y);
-		nxtDisplayTextLine(2, "t: %f", robot_TH / PI * 180);
-		nxtDisplayTextLIne(3, "p: %f", robot_PHI/PI*180);
+		nxtDisplayTextLine(0, "t: %f", robot_TH / PI * 180);
 
+		// Get sonar readings
+		bool isWall = SensorValue[S1] <= SONAR_THRESHOLD;
+
+		curr_sec = (round(robot_TH/(2*PI/16)))%16;
+
+		if (!configured){
+
+			nxtDisplayTextLine(2, "Goal: %f", goal_TH * 180/PI);
+			if (!seen_gap && !isWall){
+				seen_gap = true;
+				playSound(soundBlip);
+			}
+			else if (isWall && !seen_wall){
+				goal_TH = robot_TH + WALL_WIDTH*2;
+				if (goal_TH > 2*PI){
+					goal_TH -= 2*PI;
+				}
+				seen_wall = true;
+				playSound(soundException);
+			}
+			else if (seen_wall){
+				if (robot_TH > goal_TH){
+
+					nxtDisplayTextLine(1, "Result: %f", robot_TH * 180/PI);
+					configured = true;
+					robot_Y = 0;
+					robot_X = 12;
+					robot_TH = PI/2;
+					last_sec = -1;
+				}
+			}
+		}
+		else{ //We are configured
+			motor[motorRight] = 0;
+			motor[motorLeft] = 0;
+
+			if(curr_sec != last_sec){ //We have moved one section
+				if(isWall){
+					playSound(soundShortBlip);
+				}
+				else{
+					playSound(soundBeepBeep);
+				}
+				last_sec = curr_sec;
+
+				for (int i = 0; i < 16; i++){
+					if ((map[i] == 1 && isWall) || (map[i] == 0 && !isWall)){
+						belief[(i + curr_sec - 1) % 16] += 0.25;
+						belief[(i + curr_sec) % 16] += 1;
+						belief[(i + curr_sec + 1) % 16] += 0.25;
+					}
+				}
+				float max_belief = 0;
+				for (int j = 0; j < 16; j++){
+					if(belief[j] > max_belief){
+						max_belief = belief[j];
+					}
+				}
+				for (int k = 0; k < 16; k++){
+					belief[k] /= max_belief;
+				}
+			}
+
+			nxtDisplayTextLine(3, "Last: %d", last_sec);
+			nxtDisplayTextLine(4, "Current: %d", curr_sec);
+		}
 		wait1Msec(velocityUpdateInterval);
 	}
 }
 
+
+
 /*****************************************
 * Main function - Needs changing
 *****************************************/
-
 
 task main()
 {
@@ -89,8 +193,8 @@ task main()
 
 	clearTimer(T1);
 
-	float feedforward = .5*MOTOR_POWER;
-	float additional_ff = .5*MOTOR_POWER;
+	float feedforward = .3*MOTOR_POWER;
+	float additional_ff = .8*MOTOR_POWER;
 	// Find the line by turning left, then if line is not found within angle, turn right
 	while(SensorValue[S2] >= THRESHOLD ){
 		nxtDisplayTextLine(0, "Searching");
@@ -101,6 +205,8 @@ task main()
 
 	// Start line following
 	while(1){
+		if(configured) return;
+
 		if(SensorValue[S2] < THRESHOLD){ // Seeing the black line
 			motor[motorLeft] = MOTOR_POWER;
 			motor[motorRight] = MOTOR_POWER+feedforward;
@@ -109,7 +215,7 @@ task main()
 			motor[motorLeft] = MOTOR_POWER -additional_ff/2;
 			motor[motorRight] = MOTOR_POWER +feedforward+additional_ff/2;
 		}
-		if(robot_PHI >= PI/2)
+		if(equals(robot_TH, PI/2- 0.015, 0.01))
 		{
 			motor[motorRight] = 0;
 			motor[motorLeft] = 0; //Left Motor
