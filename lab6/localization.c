@@ -13,23 +13,28 @@
 * Feel free to modify any part of these codes.
 **********************************************/
 
-// Map setup
+// Ground truth map vector, clockwise
 const char map[16] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1};
+// The goal section to go to
+const int goal_sec = 4;
+// Set this to 32 for two loops of configuration in challenge mode
+const int CONFIG_COUNT = 32;
 
+// Robot's belief of where it started
 float belief[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+// Robot's recording of where it saw walls in the last run
 int wall[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
+// Number of sections we have passed
 int sec_count = 0;
-int goal_sec = 9;
 
 //Set parameters
-const int CONFIG_COUNT = 32;
-const float WALL_RADIUS = 21;
-const int THRESHOLD = 40;
-const float SONAR_THRESHOLD = 30;
+const float WALL_RADIUS = 21; // The radius of the circle the walls stand on
+const int THRESHOLD = 40; // Threshold for line follinwg, below this value considered black line
+const float SONAR_THRESHOLD = 30; // Sonar readings below this value is considered a wall
 const int MOTOR_POWER = 35;	 //Base motor power to control the speed
 const int UPDATE_INTERVAL = 1; //Delay updates by x miliseconds
-const float WALL_WIDTH = 6/(2*PI*WALL_RADIUS);
+const float WALL_WIDTH = 6/(2*PI*WALL_RADIUS); // The projection of wall onto the path in radians
 
 //Robot's positions
 float robot_X = 12, robot_Y = 0.0, robot_TH = PI/2, robot_PHI = 0.0;
@@ -58,9 +63,14 @@ task dead_reckoning()
 	bool init_enc = true;
 	float last_enc_L, last_enc_R;
 
+	// Flags used for starting section configuration
 	bool seen_gap = false;
 	bool seen_wall = false;
+
+	// Ready to head home
 	bool homestretch = false;
+
+	// The half angle-width of the
 	float goal_TH;
 
 	while(1)
@@ -120,21 +130,21 @@ task dead_reckoning()
 			curr_sec += 16;
 		}
 
-		if (!configured){
+		if (!configured){ //We need to determine whether we are in the middle of the map
 
 			nxtDisplayTextLine(2, "Goal: %f", goal_TH * 180/PI);
-			if (!seen_gap && !isWall){
+			if (!seen_gap && !isWall){ //We are ready to look for the first wall
 				seen_gap = true;
-				playSound(soundBlip);
+				playSound(soundDownwardTones);
 			}
-			else if (isWall && !seen_wall){
-				goal_TH = robot_TH + WALL_WIDTH*2.7;
+			else if (isWall && !seen_wall){ //We see our first wall, wait a bit to be in the middle of the section
+				goal_TH = robot_TH + WALL_WIDTH*4.7;
 				if (goal_TH > 2*PI){
 					goal_TH -= 2*PI;
 				}
 				seen_wall = true;
 			}
-			else if (seen_wall){
+			else if (seen_wall){ //We are ready to start localizing, we are supposed to be in the middle of a section
 				if (robot_TH > goal_TH){
 					playSound(soundException);
 					configured = true;
@@ -154,12 +164,12 @@ task dead_reckoning()
 				if(sec_count >= CONFIG_COUNT && !homestretch){ //Completed localization, get current sec
 					playSound(soundFastUpwardTones);
 					homestretch = true;
-					int belief_sec = 0;
+					int belief_sec = 0; // where we think we currently are
 					int maxBelief = 0;
 					for(int i = 0; i < 16; i++){
-						if(belief[i] > maxBelief){
+						if(belief[i] > maxBelief){ //The highest belief indicates our starting position
 							maxBelief = belief[i];
-							belief_sec = (i + curr_sec)%16;
+							belief_sec = (i + curr_sec)%16; // Offset by our dead reckoning to get current position
 						}
 					}
 					curr_sec = belief_sec;
@@ -193,9 +203,9 @@ task dead_reckoning()
 							if(ind3 < 0){
 								ind3 += 16;
 							}
-							belief[ind1] += 0.25;
+							belief[ind1] += 0.5;
 							belief[ind2] += 1;
-							belief[ind3] += 0.25;
+							belief[ind3] += 0.5;
 						}
 					}
 				}
@@ -219,7 +229,7 @@ task main()
 	clearTimer(T1);
 
 	float feedforward   = .3*MOTOR_POWER;
-	float additional_ff = .7*MOTOR_POWER;
+	float additional_ff = .9*MOTOR_POWER;
 
 	startTask(dead_reckoning);
 
@@ -236,7 +246,6 @@ task main()
 		}
 		if(done)
 		{
-			playSound(soundDownwardTones);
 			motor[motorLeft]  = 0;
 			motor[motorRight] = 0;
 			return;
