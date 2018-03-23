@@ -47,13 +47,21 @@ task main()
 
 
 		//set LED light
-		if(joy1Btn(1) == 1 && joy1Btn(3) == 0)
+		if(joy1Btn(1) == 1 && joy1Btn(3) == 0 && joy1Btn(2) == 0 && joy1Btn(4) == 0)
 		{
 			i2c_read_registers_text(0x10, 0, 10);
 		}
-		if(joy1Btn(1) == 0 && joy1Btn(3) == 1)
+		if(joy1Btn(1) == 0 && joy1Btn(3) == 1 && joy1Btn(2) == 0 && joy1Btn(4) == 0)
 		{
 			i2c_read_registers_text(0x01, 0, 10);
+		}
+		if(joy1Btn(1) == 0 && joy1Btn(3) == 0 && joy1Btn(2) == 1 && joy1Btn(4) == 0)
+		{
+			i2c_read_registers_text(0x00, 0, 10);
+		}
+		if(joy1Btn(1) == 0 && joy1Btn(3) == 1 && joy1Btn(2) == 0 && joy1Btn(4) == 1)
+		{
+			i2c_read_registers_text(0x11, 0, 10);
 		}
 	}
 
