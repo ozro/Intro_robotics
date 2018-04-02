@@ -36,14 +36,14 @@ task main()
 		//Motor Control
 		if(abs(joystick.joy1_y1)>15)
 		{
-			motor[motorB] = -1.0*joystick.joy1_y1;
+			motor[motorB] = 1.0*joystick.joy1_y1;
 		}
 		else motor[motorB] = 0;
 		if(abs(joystick.joy1_y2)>15)
 		{
-			motor[motorA] = -1.0*joystick.joy1_y2;
+			motor[motorC] = 1.0*joystick.joy1_y2;
 		}
-		else motor[motorA] = 0;
+		else motor[motorC] = 0;
 
 
 		//set LED light
