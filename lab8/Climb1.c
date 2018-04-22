@@ -17,15 +17,15 @@ task main()
 		//motor[motorC] = 50;
 		nxtDisplayCenteredTextLine(4, "Sensor: %f", SensorValue[S2]);
 		nxtDisplayCenteredTextLine(5, "Counts: %f", nMotorEncoder[motorC]);
-		writeDebugStreamLine("%d", SensorValue[S2])
+		writeDebugStreamLine("%d", SensorValue[S2]);
 
 		nxtDisplayCenteredTextLine(2, "Rung: %d", floor(nMotorEncoder[motorC]/180));
-		int rung = floor(nMotorEncoder[MotorC]/180);
+		int rung = floor(nMotorEncoder[motorC]/180);
 		if(!sensed && SensorValue[S2] >= 30 && floor(nMotorEncoder[motorC]/180)%2 == 0)
 		{
 			playSound(soundBeepBeep);
 			nxtDisplayCenteredTextLine(3, "Even: %f", SensorValue[S2]);
-			sensed = True
+			sensed = true;
 
 			//finalCount = nMotorEncoder[motorC] + 0.4*rotationCount;
 			finalCount = rung * 180 + 45;
@@ -34,7 +34,7 @@ task main()
 		{
 			playSound(soundBeepBeep);
 			nxtDisplayCenteredTextLine(3, "Odd: %f", SensorValue[S2]);
-			sensed = True
+			sensed = true;
 			//finalCount = nMotorEncoder[motorC] + 0.20*rotationCount;
 			finalCount = rung * 180 + 40;
 		}
