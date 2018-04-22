@@ -3,12 +3,12 @@ l1 = 3.75; % unit is inch
 
 l2 = 2.5; % unit is inch
 
-c_space_idx = ones(180,360); % Resolution is 1 degree
+c_space_matrix = zeros(361,181); % Resolution is 1 degree
 
 t1 = 0:180;
 t2 = -180:180;
 
-c_space = ones(180*360,2)*200;  % First col: theta1, second col: theta2. Multiply 200 is for later thresholding
+c_space = ones(181*361,2)*200;  % First col: theta1, second col: theta2. Multiply 200 is for later thresholding
 
 [t1,t2] = meshgrid(t1, t2);
 
@@ -18,29 +18,39 @@ x1 = cosd(t1)*l1;
 y1 = sind(t1)*l1;
 
 counter = 1;
+
+x_line = [0,0];
+y_line = [0,0];
+x_box = [-7,-7,-3,-3,3,3,7,7];
+y_box = [0,8,8,5,5,8,8,0];
+
 for row = 1:size(x,1)
     for col = 1:size(x,2)
-         N = 10;   % Number of points on the line to test
-        [xx,yy] = fill_line([x1(row,col), y1(row,col)], [x(row,col) y(row,col)], N);
-        valid = 1;
         
-        for j = 1:length(xx)
-            if ((xx(j) >= -3.5 && xx(j) <= 3.5 && yy(j) >= 4.5) || ...
-                (abs(xx(j)) > 7) || ...
-                (yy(j) > 8) || ...
-                (yy(j) < 0))
-             
-                valid = 0;
-                break;
-            end
+        if(y(row, col) < 0)
+            continue
         end
         
-        if (valid == 1)
+        x_line = [x1(row,col),x(row,col)];
+        y_line = [y1(row,col),y(row,col)];
+         
+        [xi,yi] = polyxpoly(x_line,y_line,x_box,y_box);
+        
+        if (numel(xi) == 0)
             c_space(counter,:) = [t1(1,col) t2(row,1)];
             counter = counter + 1;
+            c_space_matrix(row,col) = 1;
         end
     end
 end
-
-c_space = c_space(1:counter-1,:);
-scatter(c_space(:,1), c_space(:,2), 5,'filled')
+% figure(1);
+% c_space = c_space(1:counter-1,:);
+% scatter(c_space(:,1), c_space(:,2), 5,'filled')
+% 
+% figure(2);
+% x = cosd(c_space(:,1))*l1 + cosd(c_space(:,2) + c_space(:,1))*l2;
+% y = sind(c_space(:,1))*l1 + sind(c_space(:,2) + c_space(:,1))*l2;
+% scatter(x,y,'.');
+% axis([-8,8,-8,8])
+c_space_matrix_flipped = flipud(c_space_matrix);
+save('c_space_matrix.mat','c_space_matrix_flipped');
