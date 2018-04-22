@@ -3,12 +3,12 @@ l1 = 3.75; % unit is inch
 
 l2 = 2.5; % unit is inch
 
-c_space_matrix = zeros(361,181); % Resolution is 1 degree
+c_space_matrix = zeros(1801,901); % Resolution is 1 degree
 
-t1 = 0:180;
-t2 = 0:360;
+t1 = 0:0.2:180;
+t2 = 0:0.2:360;
 
-c_space = ones(181*361,2)*200;  % First col: theta1, second col: theta2. Multiply 200 is for later thresholding
+c_space = ones(1801*901,2)*200;  % First col: theta1, second col: theta2. Multiply 200 is for later thresholding
 
 [t1,t2] = meshgrid(t1, t2);
 
