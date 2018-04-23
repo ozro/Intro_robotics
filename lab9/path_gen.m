@@ -10,22 +10,28 @@
 % waypoints_inch    - a list of waypoints in inches
 % waypoints.txt     - a text file containing waypoinst in millimeters
 function [waypoints, waypoints_relative] = path_gen(map, wavemap, start, goal, visualize)
+x = start(1);
+y = start(2);
+l1 = 3.75;
+l2 = 2.5;
+Theta2 = acos((x^2 + y^2 - l1^2 - l2^2)/(2*l1*l2));
+s1 = (y*(l1 + l2*cos(Theta2)) - x*l2*sin(Theta2))/(x^2+y^2);
+c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
+
+Theta1 = atan2(s1,c1);
+start = [Theta1 Theta2 - Theta1] * 180 / pi;
+
 x = goal(1);
 y = goal(2);
 l1 = 3.75;
 l2 = 2.5;
-Beta = acos((x^2 + y^2 - l1^2 - l2^2)/(2*l1*l2));
-s1 = (y*(l1 + l2*cos(Beta)) - x*l2*sin(Beta))/(x^2+y^2);
-c1 = (x+s1*(l2*sin(Beta)))/(l1+l2*cos(Beta));
+Theta2 = acos((x^2 + y^2 - l1^2 - l2^2)/(2*l1*l2));
+s1 = (y*(l1 + l2*cos(Theta2)) - x*l2*sin(Theta2))/(x^2+y^2);
+c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
 
 Theta1 = atan2(s1,c1);
 
-Theta2 = Beta + Theta1;
-
-goal = round([Theta1 Theta2] * 180/pi);
-
-start = start + 1;
-goal = goal + 1;
+goal = [Theta1 Theta2 - Theta1] * 180/pi;
 
 % Change map to uint8
 map = uint8(map);
@@ -87,6 +93,8 @@ end
 % visualize   - Flag for the path finding visualization
 function [path, f] = a_star(map, wavemap, start, goal, visualize)
     % Convert to linear indices
+    start = round((start * 5)+1)
+    goal = round((goal * 5) + 1)
     start_ind = sub2ind(size(map), start(2), start(1));
     goal_ind  = sub2ind(size(map), goal(2), goal(1));
     
