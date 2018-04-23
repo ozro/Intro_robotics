@@ -19,7 +19,7 @@ s1 = (y*(l1 + l2*cos(Theta2)) - x*l2*sin(Theta2))/(x^2+y^2);
 c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
 
 Theta1 = atan2(s1,c1);
-start = [Theta1 Theta2 - Theta1] * 180 / pi;
+start = [Theta1 Theta2 + Theta1] * 180 / pi;
 
 x = goal(1);
 y = goal(2);
@@ -31,8 +31,9 @@ c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
 
 Theta1 = atan2(s1,c1);
 
-goal = [Theta1 Theta2 - Theta1] * 180/pi;
-
+goal = [Theta1 Theta2+Theta1] * 180/pi;
+    start = round((start * 2)+1)
+    goal = round((goal * 2) + 1)
 % Change map to uint8
 map = uint8(map);
 
@@ -48,7 +49,7 @@ tic
 waypoints = clean_path(path);
 fprintf(' Complete!\n\tElapsed time is %f s\n', toc);
 
-waypoints = waypoints - 1;
+
 % Visualize final path
 close all;
     figure(1);
@@ -81,6 +82,7 @@ close all;
     figure(1);
     
 % output final waypoints in relative
+waypoints = (waypoints - 1)/2;
 waypoints(1,:) = [0, 0];
 for i = 2:size(waypoints, 1)
     waypoints_relative(i-1, :) = waypoints(i,:) - waypoints(i-1,:);
@@ -93,8 +95,7 @@ end
 % visualize   - Flag for the path finding visualization
 function [path, f] = a_star(map, wavemap, start, goal, visualize)
     % Convert to linear indices
-    start = round((start * 5)+1)
-    goal = round((goal * 5) + 1)
+
     start_ind = sub2ind(size(map), start(2), start(1));
     goal_ind  = sub2ind(size(map), goal(2), goal(1));
     
@@ -240,7 +241,7 @@ function h = heuristic(map, node, goal)
     [y, x] = ind2sub(size(map), node);
     [gy, gx] = ind2sub(size(map), goal);
     
-    h = sqrt((y-gy)^2 + (x-gx)^2);
+    h = abs(y-gy) + abs(x-gx);
 end
 
 % Returns an path of [x, y] points in each row, from start to end
