@@ -86,7 +86,7 @@ close all;
     
 % output final waypoints in relative
 waypoints = (waypoints - 1)/2;
-waypoints(1,:) = [0, 0];
+%waypoints(1,:) = [0, 0];
 for i = 2:size(waypoints, 1)
     waypoints_relative(i-1, :) = waypoints(i,:) - waypoints(i-1,:);
 end
