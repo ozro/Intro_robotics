@@ -115,12 +115,12 @@ function [path, f] = a_star(map, wavemap, start, goal, visualize)
     % Used to create the path
     prev = zeros(numel(map), 1);
     
-    % g score is the path length from the start to the current node
+    % g score is the path length from the start to the current node 
     g = ones(size(map)) * numel(map);
     g(start_ind) = 0;
     % f score is the g score + the heuristic at the current node
     f = zeros(size(map));
-    f(start_ind) = heuristic(map, start_ind, goal_ind);
+    f(start_ind) = heuristic(map, wavemap, wavepeak, start_ind, goal_ind);
     
     while open_len > 0
         
@@ -184,15 +184,15 @@ function [path, f] = a_star(map, wavemap, start, goal, visualize)
                 end
                 
                 % Check subscripts validity
-                if current_row + row > size(map, 1) || current_row + row < 1
+                if current_row + row > size(map, 1)
+                    neighbor = sub2ind(size(map), 1, current_col + col);
+                elseif current_row + row < 1
+                    neighbor = sub2ind(size(map), size(map, 1), current_col + col);
+                elseif current_col + col > size(map, 2) || current_col + col < 1
                     continue;
+                else
+                    neighbor = sub2ind(size(map), current_row + row, current_col + col);
                 end
-                if current_col + col > size(map, 2) || current_col + col < 1
-                    continue;
-                end
-                
-                neighbor = sub2ind(size(map), current_row + row, current_col + col);
-                
                 % Reject obstacle nodes (1) or visited nodes (1)
                 if map(neighbor) > 0
                     continue;
@@ -203,7 +203,7 @@ function [path, f] = a_star(map, wavemap, start, goal, visualize)
                 if new_g < g(neighbor)
                     prev(neighbor) = current;
                     g(neighbor) = new_g;
-                    f(neighbor) = g(neighbor) + heuristic(map, neighbor, goal_ind);
+                    f(neighbor) = g(neighbor) + heuristic(map, wavemap, wavepeak, neighbor, goal_ind);
                 end
                 
                 % Add the node to the open set
@@ -225,23 +225,25 @@ function distance = dist(map, wavemap, peak, prev, current, neighbor)
     %distance = sqrt((y1-y2)^2 + (x1-x2)^2)/2;
     distance = abs(y1-y2) + abs(x1-x2);
     % Weight paths by distance to closest obstacle
-    distance = distance + (peak-wavemap(current));
+    distance = distance + (peak-wavemap(current))/2;
 
     % Weight paths by number of turns
     curr_angle = atan2((y2-y1),(x2-x1));
     prev_angle = atan2((y1-y0),(x1-x0));
     diff = abs(angdiff(curr_angle, prev_angle));
     if(diff > 0)
-        distance = distance + 50;
+        distance = distance + 100;
     end
 end
 
 % Heuristic is just euclidean distance from node to goal
-function h = heuristic(map, node, goal)
+function h = heuristic(map, wavemap, peak, node, goal)
     [y, x] = ind2sub(size(map), node);
     [gy, gx] = ind2sub(size(map), goal);
     
-    h = abs(y-gy) + abs(x-gx);
+    ydist = min([abs(y-gy), abs(y-360-gy), abs(y+360-gy)]);
+    h = ydist + abs(x-gx) + (peak-wavemap(node));
+
 end
 
 % Returns an path of [x, y] points in each row, from start to end
