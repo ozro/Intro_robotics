@@ -3,20 +3,20 @@ l1 = 3.75; % unit is inch
 
 l2 = 2.5; % unit is inch
 
-c_space_matrix = zeros(1801,901); % Resolution is 1 degree
+c_space_matrix = zeros(721,361); % Resolution is 0.5 degree
 
-t1 = 0:0.2:180;
-t2 = 0:0.2:360;
+t1 = 0:0.5:180;
+t2 = 0:0.5:360;
 
-c_space = ones(1801*901,2)*200;  % First col: theta1, second col: theta2. Multiply 200 is for later thresholding
+c_space = ones(361*721,2)*200;  % First col: theta1, second col: theta2. Multiply 200 is for later thresholding
 
 [t1,t2] = meshgrid(t1, t2);
 
 
-x = cosd(t1)*l1 + cosd(t1+t2)*l2;
-y = sind(t1)*l1 + sind(t1+t2)*l2;
-% x = cosd(t1)*l1 + cosd(t2)*l2;
-% y = sind(t1)*l1 + sind(t2)*l2;
+% x = cosd(t1)*l1 + cosd(t1+t2)*l2;
+% y = sind(t1)*l1 + sind(t1+t2)*l2;
+x = cosd(t1)*l1 + cosd(t2)*l2;
+y = sind(t1)*l1 + sind(t2)*l2;
 x1 = cosd(t1)*l1;
 y1 = sind(t1)*l1;
 
@@ -51,9 +51,9 @@ c_space = c_space(1:counter-1,:);
 scatter(c_space(:,1), c_space(:,2), 5,'filled')
 
 figure(2);
-x = cosd(c_space(:,1))*l1 + cosd(c_space(:,2)+c_space(:,1))*l2;
-y = sind(c_space(:,1))*l1 + sind(c_space(:,2)+c_space(:,1))*l2;
+x = cosd(c_space(:,1))*l1 + cosd(c_space(:,2))*l2;
+y = sind(c_space(:,1))*l1 + sind(c_space(:,2))*l2;
 scatter(x,y,'.');
 axis([-8,8,-8,8])
-c_space_matrix_relative = flipud(c_space_matrix);
-save('c_space_matrix_relative.mat','c_space_matrix_relative');
+c_space_matrix_absolute = flipud(c_space_matrix);
+save('c_space_matrix_absolute.mat','c_space_matrix_absolute');
