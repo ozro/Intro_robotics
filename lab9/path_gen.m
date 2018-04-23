@@ -19,7 +19,7 @@ s1 = (y*(l1 + l2*cos(Theta2)) - x*l2*sin(Theta2))/(x^2+y^2);
 c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
 
 Theta1 = atan2(s1,c1);
-start = [Theta1 Theta2 + Theta1] * 180 / pi;
+start = [Theta1 Theta2+Theta1] * 180 / pi
 
 x = goal(1);
 y = goal(2);
@@ -31,9 +31,12 @@ c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
 
 Theta1 = atan2(s1,c1);
 
-goal = [Theta1 Theta2+Theta1] * 180/pi;
-    start = round((start * 2)+1)
-    goal = round((goal * 2) + 1)
+goal = [Theta1 Theta2+Theta1] * 180/pi
+
+start = round(start * 2)+1
+goal = round(goal * 2)+1
+start(2) = mod(start(2) + 360, 720)
+goal(2) = mod(goal(2) + 360,720)
 % Change map to uint8
 map = uint8(map);
 
@@ -95,7 +98,6 @@ end
 % visualize   - Flag for the path finding visualization
 function [path, f] = a_star(map, wavemap, start, goal, visualize)
     % Convert to linear indices
-
     start_ind = sub2ind(size(map), start(2), start(1));
     goal_ind  = sub2ind(size(map), goal(2), goal(1));
     
@@ -184,15 +186,13 @@ function [path, f] = a_star(map, wavemap, start, goal, visualize)
                 end
                 
                 % Check subscripts validity
-                if current_row + row > size(map, 1)
-                    neighbor = sub2ind(size(map), 1, current_col + col);
-                elseif current_row + row < 1
-                    neighbor = sub2ind(size(map), size(map, 1), current_col + col);
-                elseif current_col + col > size(map, 2) || current_col + col < 1
+                if current_row + row > size(map, 1) ||  current_row + row < 1
                     continue;
-                else
-                    neighbor = sub2ind(size(map), current_row + row, current_col + col);
                 end
+                if current_col + col > size(map, 2) || current_col + col < 1
+                    continue;
+                end
+                neighbor = sub2ind(size(map), current_row + row, current_col + col);
                 % Reject obstacle nodes (1) or visited nodes (1)
                 if map(neighbor) > 0
                     continue;
@@ -241,8 +241,7 @@ function h = heuristic(map, wavemap, peak, node, goal)
     [y, x] = ind2sub(size(map), node);
     [gy, gx] = ind2sub(size(map), goal);
     
-    ydist = min([abs(y-gy), abs(y-360-gy), abs(y+360-gy)]);
-    h = ydist + abs(x-gx) + (peak-wavemap(node));
+    h = abs(y-gy) + abs(x-gx) + (peak-wavemap(node));
 
 end
 
