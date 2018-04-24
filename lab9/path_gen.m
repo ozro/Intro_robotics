@@ -250,14 +250,19 @@ function distance = dist(map, wavemap, peak, prev, current, neighbor)
     %distance = sqrt((y1-y2)^2 + (x1-x2)^2)/2;
     distance = abs(y1-y2) + abs(x1-x2);
     % Weight paths by distance to closest obstacle
-    distance = distance + (peak-wavemap(current))/2;
+    distance = distance + (peak-wavemap(current));
 
+    [a,b] = ind2sub(size(map),current);
+    if(a == 360 || a == 0 || a == 720)
+        distance = distance/2;
+    end
+    
     % Weight paths by number of turns
     curr_angle = atan2((y2-y1),(x2-x1));
     prev_angle = atan2((y1-y0),(x1-x0));
     diff = abs(angdiff(curr_angle, prev_angle));
     if(diff > 0)
-        distance = distance + 100;
+        distance = distance + 20;
     end
 end
 

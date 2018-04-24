@@ -7,7 +7,7 @@ function wavemap = wavefront(wavemap)
         
         for row = 1:size(wavemap, 1)
             for col = 1:size(wavemap, 2)
-                if wavemap(row, col) == label;
+                if wavemap(row, col) == label
                     for r = -1:1
                         for c = -1:1
                             if r == 0 && c == 0
