@@ -10,6 +10,10 @@
 % waypoints_inch    - a list of waypoints in inches
 % waypoints.txt     - a text file containing waypoinst in millimeters
 function [waypoints, waypoints_relative] = path_gen(map, wavemap, start, goal, visualize)
+
+xbox = [-7 7 7 2 2 -2 -2 -7];
+ybox = [0 0 8 8 5 5 8 8];
+
 x = start(1);
 y = start(2);
 l1 = 3.75;
@@ -19,7 +23,10 @@ s1 = (y*(l1 + l2*cos(Theta2)) - x*l2*sin(Theta2))/(x^2+y^2);
 c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
 
 Theta1 = atan2(s1,c1);
-if(Theta1 < 0 || Theta1 > pi)
+xd = [0 l1*cos(Theta1) l1*cos(Theta1)+l2*cos(Theta1+Theta2)];
+yd = [0 l1*sin(Theta1) l1*sin(Theta1)+l2*sin(Theta1+Theta2)];
+[xi, yi] = polyxpoly(xd,yd,xbox,ybox);
+if(Theta1 < 0 || Theta1 > pi || numel(xi) + numel(yi) > 2)
     alpha = atan2(y,x);
     Theta1 = (alpha - Theta1) + alpha;
     Theta2 = -Theta2;
@@ -35,11 +42,15 @@ s1 = (y*(l1 + l2*cos(Theta2)) - x*l2*sin(Theta2))/(x^2+y^2);
 c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
 
 Theta1 = atan2(s1,c1);
-if(Theta1 < 0 || Theta1 > pi)
+xd = [0 l1*cos(Theta1) l1*cos(Theta1)+l2*cos(Theta1+Theta2)];
+yd = [0 l1*sin(Theta1) l1*sin(Theta1)+l2*sin(Theta1+Theta2)];
+[xi, yi] = polyxpoly(xd,yd,xbox,ybox);
+if(Theta1 < 0 || Theta1 > pi || numel(xi) + numel(yi) > 2)
     alpha = atan2(y,x);
     Theta1 = (alpha - Theta1) + alpha;
     Theta2 = -Theta2;
 end
+
 
 goal = [Theta1 Theta2+Theta1] * 180/pi;
 

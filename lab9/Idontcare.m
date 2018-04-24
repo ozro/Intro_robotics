@@ -1,5 +1,5 @@
 load c_space.mat
-targets = [-1.5 0.5; 3.5 4.5; 6.25 0];
+targets = [2 1; -2 1; 6.25 0];
 
 [~, waypoints1] = path_gen(c_space, wavemap, [6.25 0], targets(1,:), false)
 [~, waypoints2] = path_gen(c_space, wavemap, targets(1,:), targets(2,:), false)
