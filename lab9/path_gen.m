@@ -19,6 +19,11 @@ s1 = (y*(l1 + l2*cos(Theta2)) - x*l2*sin(Theta2))/(x^2+y^2);
 c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
 
 Theta1 = atan2(s1,c1);
+if(Theta1 < 0 || Theta1 > pi)
+    alpha = atan2(y,x);
+    Theta1 = (alpha - Theta1) + alpha;
+    Theta2 = -Theta2;
+end
 start = [Theta1 Theta2+Theta1] * 180 / pi;
 
 x = goal(1);
@@ -30,6 +35,11 @@ s1 = (y*(l1 + l2*cos(Theta2)) - x*l2*sin(Theta2))/(x^2+y^2);
 c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
 
 Theta1 = atan2(s1,c1);
+if(Theta1 < 0 || Theta1 > pi)
+    alpha = atan2(y,x);
+    Theta1 = (alpha - Theta1) + alpha;
+    Theta2 = -Theta2;
+end
 
 goal = [Theta1 Theta2+Theta1] * 180/pi;
 
@@ -100,6 +110,8 @@ end
 % visualize   - Flag for the path finding visualization
 function [path, f] = a_star(map, wavemap, start, goal, visualize)
     % Convert to linear indices
+    start
+    goal
     start_ind = sub2ind(size(map), start(2), start(1));
     goal_ind  = sub2ind(size(map), goal(2), goal(1));
     
