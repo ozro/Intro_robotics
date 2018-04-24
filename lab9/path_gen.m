@@ -19,7 +19,7 @@ s1 = (y*(l1 + l2*cos(Theta2)) - x*l2*sin(Theta2))/(x^2+y^2);
 c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
 
 Theta1 = atan2(s1,c1);
-start = [Theta1 Theta2+Theta1] * 180 / pi
+start = [Theta1 Theta2+Theta1] * 180 / pi;
 
 x = goal(1);
 y = goal(2);
@@ -31,12 +31,12 @@ c1 = (x+s1*(l2*sin(Theta2)))/(l1+l2*cos(Theta2));
 
 Theta1 = atan2(s1,c1);
 
-goal = [Theta1 Theta2+Theta1] * 180/pi
+goal = [Theta1 Theta2+Theta1] * 180/pi;
 
-start = round(start * 2)+1
-goal = round(goal * 2)+1
-start(2) = mod(start(2) + 360, 720)
-goal(2) = mod(goal(2) + 360,720)
+start = round(start * 2)+1;
+goal = round(goal * 2)+1;
+start(2) = mod(start(2) + 360, 720);
+goal(2) = mod(goal(2) + 360,720);
 % Change map to uint8
 map = uint8(map);
 
@@ -90,6 +90,8 @@ waypoints = (waypoints - 1)/2;
 for i = 2:size(waypoints, 1)
     waypoints_relative(i-1, :) = waypoints(i,:) - waypoints(i-1,:);
 end
+waypoints = waypoints_relative;
+waypoints_relative = waypoints_relative * [5 0; 0 40/24];
 end
 
 % Inputs
@@ -133,8 +135,8 @@ function [path, f] = a_star(map, wavemap, start, goal, visualize)
         if visualize
             figure(3);
             plot_space = map;
-            for i = 1:open_len
-                plot_space(open_set(i)) = 4;
+            for j = 1:open_len
+                plot_space(open_set(j)) = 4;
             end
             plot_space(current) = 5;
             
@@ -275,10 +277,10 @@ function [list, len] = add(list, len, node, f)
         list(1,:) = [node, f(node)];
         len = len+1;
     else
-        for i = len:-1:0
-            if i == 0 || f(node) < list(i,2)
-                list(i+2:len+2,:) = list(i+1:len+1,:);
-                list(i+1,:) = [node, f(node)];
+        for j = len:-1:0
+            if j == 0 || f(node) < list(j,2)
+                list(j+2:len+2,:) = list(j+1:len+1,:);
+                list(j+1,:) = [node, f(node)];
                 len = len + 1;
                 return
             end
@@ -291,10 +293,10 @@ function [waypoints] = clean_path(path)
 waypoints = zeros(size(path));
 len = 1;
 waypoints(len, :) = path(1,:);
-for i = 3:size(path, 1)-1
-    p0 = path(i - 1, :);
-    p1 = path(i,:);
-    p2 = path(i+1, :);
+for j = 3:size(path, 1)-1
+    p0 = path(j - 1, :);
+    p1 = path(j,:);
+    p2 = path(j+1, :);
     prev_angle = atan2((p1(2)-p0(2)),(p1(1)-p0(1)));
     curr_angle = atan2((p2(2)-p1(2)),(p2(1)-p1(1)));
     diff = abs(angdiff(curr_angle, prev_angle));
