@@ -24,8 +24,8 @@ fill(p1,p2,'r')
 axis([-7 7 0 8]);
 
 waypoints1(:,1)'
-waypoints1(:,2)'
 waypoints2(:,1)'
-waypoints2(:,2)'
 waypoints3(:,1)'
+waypoints1(:,2)'
+waypoints2(:,2)'
 waypoints3(:,2)'
