@@ -8,8 +8,8 @@
 
 /* Two states: 1. Look, 2. Charge, 3. Recover, 4. Push back the offender
 */
-int lookMotorPower = 50;
-int chargeMotorPower = 100;
+int lookMotorPower = 100;
+int chargeMotorPower = 75;
 int gameState = 1;
 int lightThreshold = 65;
 int sonarThreshold = 60;
@@ -17,6 +17,7 @@ int sonarThreshold = 60;
 bool switchSearchDir = false;
 bool notSeen = false;
 bool backwardFlag = false;
+
 
 task main()
 {
@@ -60,7 +61,6 @@ task main()
 			// Find the opponent in front
 			if(SensorValue[sonar] < sonarThreshold){
 				gameState = 2;
-				playSound(soundBeepBeep);
 				motor[leftMotor] = 0;
 				motor[rightMotor] = 0;
 				continue;
@@ -85,7 +85,6 @@ task main()
 				else if (time1(T2) > 1000){
 					notSeen = false;
 					gameState = 1;
-					playSound(soundDownwardTones);
 					continue;
 				}
 			}
