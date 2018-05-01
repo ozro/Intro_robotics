@@ -11,16 +11,19 @@
 int lookMotorPower = 100;
 int chargeMotorPower = 100;
 int gameState = 1;
-int lightThreshold = 65;
-int sonarThreshold = 60;
+int lightThreshold = 56;
+int sonarThreshold = 80;
 
-bool switchSearchDir = false;
 bool notSeen = false;
 bool backwardFlag = false;
-
+bool startLookFlag = false;
+int startTime = 1000;
+int rotation = 1;
 
 task main()
 {
+	rotation = rand()%2*2-1;
+	lookMotorPower = rotation*lookMotorPower;
 	while(1) {
 		nxtDisplayCenteredTextLine(1, "sonar: %f", SensorValue[sonar]);
 		nxtDisplayCenteredTextLine(2, "touch: %f", SensorValue[touch]);
@@ -34,6 +37,7 @@ task main()
 				gameState = 3;
 				motor[leftMotor] = 0;
 				motor[rightMotor] = 0;
+				startTime = 1000;
 				continue;
 			}
 			// Push back the offender if getting pushed
@@ -41,28 +45,34 @@ task main()
 				gameState = 4;
 				motor[leftMotor] = 0;
 				motor[rightMotor] = 0;
+				startTime = 1000;
 				continue;
 			}
-
+			// Initially rotate for 0.5 seconds.
 			// If have been searching in the same direction for more than 3 seconds,
 			// switch the direction
-			if (!switchSearchDir) {
-				switchSearchDir = true;
-				clearTimer(T3);
+			if(!startLookFlag)
+			{
+				clearTimer(T4);
+				startLookFlag = true;
 			}
-			else {
-				if (time1(T3} >= 3000) {
-					motor[leftMotor] = -motor[leftMotor];
-					motor[rightMotor] = -motor[rightMotor];
-					switchSearchDir = false
+			else
+			{
+				if (time1(T4)>=startTime)
+				{
+					lookMotorPower = -lookMotorPower;
+					startTime = 4000;
+					startLookFlag = false;
 				}
 			}
+
 
 			// Find the opponent in front
 			if(SensorValue[sonar] < sonarThreshold){
 				gameState = 2;
 				motor[leftMotor] = 0;
 				motor[rightMotor] = 0;
+				startTime = 1000;
 				continue;
 			}
 			motor[leftMotor] = lookMotorPower;
@@ -85,6 +95,8 @@ task main()
 				else if (time1(T2) > 1000){
 					notSeen = false;
 					gameState = 1;
+					rotation = rand()%2*2-1;
+					lookMotorPower = rotation*lookMotorPower;
 					continue;
 				}
 			}
@@ -110,6 +122,8 @@ task main()
 					backwardFlag = false;
 					motor[leftMotor] = 0;
 					motor[rightMotor] = 0;
+					rotation = rand()%2*2-1;
+					lookMotorPower = rotation*lookMotorPower;
 					gameState = 1;
 				}
 			}
