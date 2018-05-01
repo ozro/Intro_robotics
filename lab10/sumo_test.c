@@ -9,7 +9,7 @@
 /* Two states: 1. Look, 2. Charge, 3. Recover, 4. Push back the offender
 */
 int lookMotorPower = 100;
-int chargeMotorPower = 75;
+int chargeMotorPower = 100;
 int gameState = 1;
 int lightThreshold = 65;
 int sonarThreshold = 60;
@@ -91,7 +91,7 @@ task main()
 			motor[leftMotor] = chargeMotorPower;
 			motor[rightMotor] = chargeMotorPower;
 		}
-		// When in recover mode, first back up and then turn around
+		// When in recover mode, first back up and then turn around and go for certain distance
 		if (gameState == 3) {
 			if (!backwardFlag) {
 				clearTimer(T1);
@@ -101,6 +101,10 @@ task main()
 				if (time1[T1] <= 500) {
 					motor[leftMotor] = -chargeMotorPower;
 					motor[rightMotor] = -chargeMotorPower;
+				}
+				else if (time1[T1] <= 1000) {
+					motor[leftMotor] = lookMotorPower;
+					motor[rightMotor] = -lookMotorPower;
 				}
 				else {
 					backwardFlag = false;
